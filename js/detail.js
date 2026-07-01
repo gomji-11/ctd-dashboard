@@ -1,12 +1,16 @@
-let products = loadProducts();
+import {
+  getProductById,
+  saveProduct,
+  getRequiredItems,
+  getAvailableModuleCount,
+  getNewVersionItems,
+  getNewVersionRate,
+  getCompletionRate
+} from "./data.js";
 
 const productId = new URLSearchParams(window.location.search).get("id");
-let product = products.find(item => item.productId === productId);
 
-if (!product) {
-  alert("해당 품목을 찾을 수 없습니다.");
-  location.href = "index.html";
-}
+let product = null;
 
 let openedModules = {
   "Module 1": false,
@@ -15,6 +19,19 @@ let openedModules = {
   "Module 4": false,
   "Module 5": false
 };
+
+async function init() {
+  product = await getProductById(productId);
+
+  if (!product) {
+    alert("해당 품목을 찾을 수 없습니다.");
+    location.href = "index.html";
+    return;
+  }
+
+  renderSummary();
+  renderModules();
+}
 
 function renderSummary() {
   const requiredCount = getRequiredItems(product).length;
@@ -37,10 +54,8 @@ function renderSummary() {
   document.getElementById("dosageForm").textContent = product.dosageForm || "-";
 }
 
-function saveCurrentProduct() {
-  const productIndex = products.findIndex(item => item.productId === product.productId);
-  products[productIndex] = product;
-  saveProducts(products);
+async function saveCurrentProduct() {
+  await saveProduct(product);
 }
 
 function getItemsByModule() {
@@ -51,22 +66,22 @@ function getItemsByModule() {
   }, {});
 }
 
-function setModuleRequired(moduleName, checked) {
+async function setModuleRequired(moduleName, checked) {
   product.ctdItems.forEach(item => {
     if (item.module === moduleName) item.required = checked;
   });
 
-  saveCurrentProduct();
+  await saveCurrentProduct();
   renderSummary();
   renderModules();
 }
 
-function setModuleAvailable(moduleName, checked) {
+async function setModuleAvailable(moduleName, checked) {
   product.ctdItems.forEach(item => {
     if (item.module === moduleName) item.available = checked;
   });
 
-  saveCurrentProduct();
+  await saveCurrentProduct();
   renderSummary();
   renderModules();
 }
@@ -431,56 +446,56 @@ function bindEvents() {
   });
 
   document.querySelectorAll(".module-required-toggle").forEach(checkbox => {
-    checkbox.addEventListener("change", event => {
+    checkbox.addEventListener("change", async event => {
       const moduleName = event.target.dataset.module;
-      setModuleRequired(moduleName, event.target.checked);
+      await setModuleRequired(moduleName, event.target.checked);
     });
   });
 
   document.querySelectorAll(".module-available-toggle").forEach(checkbox => {
-    checkbox.addEventListener("change", event => {
+    checkbox.addEventListener("change", async event => {
       const moduleName = event.target.dataset.module;
-      setModuleAvailable(moduleName, event.target.checked);
+      await setModuleAvailable(moduleName, event.target.checked);
     });
   });
 
   document.querySelectorAll(".required-checkbox").forEach(checkbox => {
-    checkbox.addEventListener("change", event => {
+    checkbox.addEventListener("change", async event => {
       const index = Number(event.target.dataset.index);
       product.ctdItems[index].required = event.target.checked;
 
-      saveCurrentProduct();
+      await saveCurrentProduct();
       renderSummary();
       renderModules();
     });
   });
 
   document.querySelectorAll(".version-status-select").forEach(select => {
-    select.addEventListener("change", event => {
+    select.addEventListener("change", async event => {
       const index = Number(event.target.dataset.index);
       product.ctdItems[index].ctdVersionStatus = event.target.value;
 
-      saveCurrentProduct();
+      await saveCurrentProduct();
       renderSummary();
       renderModules();
     });
   });
 
   document.querySelectorAll(".revision-date-input").forEach(input => {
-    input.addEventListener("change", event => {
+    input.addEventListener("change", async event => {
       const index = Number(event.target.dataset.index);
       product.ctdItems[index].revisionDate = event.target.value;
 
-      saveCurrentProduct();
+      await saveCurrentProduct();
     });
   });
 
   document.querySelectorAll(".available-checkbox").forEach(checkbox => {
-    checkbox.addEventListener("change", event => {
+    checkbox.addEventListener("change", async event => {
       const index = Number(event.target.dataset.index);
       product.ctdItems[index].available = event.target.checked;
 
-      saveCurrentProduct();
+      await saveCurrentProduct();
       renderSummary();
       renderModules();
     });
@@ -489,5 +504,4 @@ function bindEvents() {
 
 document.getElementById("printReportBtn").addEventListener("click", printPdfReport);
 
-renderSummary();
-renderModules();
+init();

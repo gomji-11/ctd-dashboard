@@ -1,14 +1,28 @@
-let products = loadProducts();
+import {
+  createCtdItems,
+  generateProductId,
+  saveProduct,
+  deleteProductById,
+  subscribeProducts,
+  getRequiredItems,
+  getAvailableModuleCount,
+  getNewVersionItems,
+  getNewVersionRate,
+  isComplete,
+  getCompletionRate
+} from "./data.js";
+
+let products = [];
 let completionChart = null;
 let conversionChart = null;
 
-function generateProductId() {
-  return "PRD-" + Date.now();
-}
-
 function getAverageNewVersionRate() {
   if (products.length === 0) return 0;
-  const totalRate = products.reduce((sum, product) => sum + getNewVersionRate(product), 0);
+
+  const totalRate = products.reduce((sum, product) => {
+    return sum + getNewVersionRate(product);
+  }, 0);
+
   return Math.round(totalRate / products.length);
 }
 
@@ -31,6 +45,7 @@ function getFilteredProducts() {
     const matchesCtd = !ctd || String(product.ctdConverted) === ctd;
 
     let matchesStatus = true;
+
     if (status === "none") {
       matchesStatus = !product.status;
     } else if (status) {
@@ -50,6 +65,7 @@ function getFilteredProducts() {
       if (a.ctdConverted !== b.ctdConverted) {
         return Number(b.ctdConverted) - Number(a.ctdConverted);
       }
+
       return bNewRate - aNewRate;
     }
 
@@ -90,7 +106,13 @@ function renderDashboard() {
         backgroundColor: ["#10b981", "#e2e8f0"]
       }]
     },
-    options: { plugins: { legend: { position: "bottom" } } }
+    options: {
+      plugins: {
+        legend: {
+          position: "bottom"
+        }
+      }
+    }
   });
 
   conversionChart = new Chart(document.getElementById("conversionChart"), {
@@ -102,7 +124,13 @@ function renderDashboard() {
         backgroundColor: ["#2563eb", "#f59e0b"]
       }]
     },
-    options: { plugins: { legend: { position: "bottom" } } }
+    options: {
+      plugins: {
+        legend: {
+          position: "bottom"
+        }
+      }
+    }
   });
 
   renderProductTable();
@@ -136,17 +164,17 @@ function renderProductTable() {
     row.className = "hover:bg-slate-50";
 
     row.innerHTML = `
-      <td class="px-6 py-6 align-middle">
+      <td class="px-5 py-6 align-middle">
         <a href="detail.html?id=${product.productId}" class="text-blue-600 hover:underline font-medium break-keep">
           ${product.productName}
         </a>
       </td>
 
-      <td class="px-6 py-6 text-center align-middle whitespace-nowrap">
+      <td class="px-4 py-6 text-center align-middle whitespace-nowrap">
         ${product.approvalNumber || "-"}
       </td>
 
-      <td class="px-6 py-6 text-center align-middle whitespace-nowrap">
+      <td class="px-4 py-6 text-center align-middle whitespace-nowrap">
         <span class="inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
           product.manufacturingType === "자사제조"
             ? "bg-emerald-100 text-emerald-700"
@@ -156,15 +184,15 @@ function renderProductTable() {
         </span>
       </td>
 
-      <td class="px-6 py-6 text-center align-middle whitespace-nowrap">
+      <td class="px-4 py-6 text-center align-middle whitespace-nowrap">
         ${product.contractorManufacturer || "-"}
       </td>
 
-      <td class="px-6 py-6 text-center align-middle whitespace-nowrap">
+      <td class="px-4 py-6 text-center align-middle whitespace-nowrap">
         ${product.dosageForm || "-"}
       </td>
 
-      <td class="px-6 py-6 text-center align-middle whitespace-nowrap">
+      <td class="px-4 py-6 text-center align-middle whitespace-nowrap">
         <span class="inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
           product.ctdConverted
             ? "bg-blue-100 text-blue-700"
@@ -174,8 +202,8 @@ function renderProductTable() {
         </span>
       </td>
 
-      <td class="px-6 py-6 text-center align-middle">
-        <div class="w-[120px] mx-auto">
+      <td class="px-4 py-6 text-center align-middle">
+        <div class="w-[110px] mx-auto">
           <div class="w-full bg-slate-200 rounded-full h-2 mb-2">
             <div class="bg-emerald-500 h-2 rounded-full" style="width: ${completionRate}%"></div>
           </div>
@@ -185,8 +213,8 @@ function renderProductTable() {
         </div>
       </td>
 
-      <td class="px-6 py-6 text-center align-middle">
-        <div class="w-[120px] mx-auto">
+      <td class="px-4 py-6 text-center align-middle">
+        <div class="w-[110px] mx-auto">
           <div class="w-full bg-slate-200 rounded-full h-2 mb-2">
             <div class="bg-blue-500 h-2 rounded-full" style="width: ${newVersionRate}%"></div>
           </div>
@@ -196,11 +224,11 @@ function renderProductTable() {
         </div>
       </td>
 
-      <td class="px-6 py-6 text-center align-middle whitespace-nowrap">
+      <td class="px-4 py-6 text-center align-middle whitespace-nowrap">
         ${product.status || "-"}
       </td>
 
-      <td class="px-6 py-6 text-center align-middle whitespace-nowrap">
+      <td class="px-4 py-6 text-center align-middle whitespace-nowrap">
         <button onclick="openEditModal('${product.productId}')" class="block mx-auto text-blue-600 hover:underline mb-2">
           수정
         </button>
@@ -260,19 +288,15 @@ function closeModal() {
   document.getElementById("productForm").reset();
 }
 
-function deleteProduct(productId) {
+async function deleteProduct(productId) {
   const product = products.find(item => item.productId === productId);
   if (!product) return;
 
   const confirmed = confirm(`'${product.productName}' 품목을 삭제하시겠습니까?`);
   if (!confirmed) return;
 
-  products = products.filter(item => item.productId !== productId);
-  saveProducts(products);
-  renderDashboard();
+  await deleteProductById(productId);
 }
-
-
 
 function backupData() {
   const data = JSON.stringify(products, null, 2);
@@ -288,13 +312,13 @@ function backupData() {
   URL.revokeObjectURL(url);
 }
 
-function importData(event) {
+async function importData(event) {
   const file = event.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
 
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
       const importedProducts = JSON.parse(e.target.result);
 
@@ -303,15 +327,16 @@ function importData(event) {
         return;
       }
 
-      const confirmed = confirm("현재 데이터를 가져온 JSON 데이터로 교체하시겠습니까?");
+      const confirmed = confirm("가져온 JSON 데이터를 Firebase에 저장하시겠습니까?");
       if (!confirmed) return;
 
-      products = importedProducts;
-      saveProducts(products);
-      renderDashboard();
+      for (const product of importedProducts) {
+        await saveProduct(product);
+      }
 
       alert("JSON 데이터를 불러왔습니다.");
     } catch (error) {
+      console.error(error);
       alert("JSON 파일을 읽는 중 오류가 발생했습니다.");
     }
   };
@@ -401,12 +426,13 @@ document.getElementById("backupDataBtn").addEventListener("click", backupData);
 document.getElementById("importDataInput").addEventListener("change", importData);
 document.getElementById("downloadCsvBtn").addEventListener("click", downloadCsv);
 
-document.getElementById("productForm").addEventListener("submit", event => {
+document.getElementById("productForm").addEventListener("submit", async event => {
   event.preventDefault();
 
   const editingProductId = document.getElementById("editingProductId").value;
 
   const productData = {
+    productId: editingProductId || generateProductId(),
     productName: document.getElementById("productNameInput").value.trim(),
     approvalNumber: document.getElementById("approvalNumberInput").value.trim(),
     manufacturingType: document.getElementById("manufacturingTypeInput").value,
@@ -419,22 +445,26 @@ document.getElementById("productForm").addEventListener("submit", event => {
   };
 
   if (editingProductId) {
-    const productIndex = products.findIndex(item => item.productId === editingProductId);
-    products[productIndex] = {
-      ...products[productIndex],
+    const existingProduct = products.find(item => item.productId === editingProductId);
+
+    await saveProduct({
+      ...existingProduct,
       ...productData
-    };
+    });
   } else {
-    products.push({
-      productId: generateProductId(),
+    await saveProduct({
       ...productData,
       ctdItems: createCtdItems()
     });
   }
 
-  saveProducts(products);
   closeModal();
-  renderDashboard();
 });
 
-renderDashboard();
+window.openEditModal = openEditModal;
+window.deleteProduct = deleteProduct;
+
+subscribeProducts(firebaseProducts => {
+  products = firebaseProducts;
+  renderDashboard();
+});

@@ -1,4 +1,14 @@
-const STORAGE_KEY = "ctd_products_v5";
+import {
+  db,
+  PRODUCTS_COLLECTION,
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  setDoc,
+  deleteDoc,
+  onSnapshot
+} from "./firebase.js";
 
 const defaultCtdItems = [
   { module: "Module 1", code: "1.1", title: "목차", required: true },
@@ -75,33 +85,63 @@ function createCtdItems() {
   }));
 }
 
-const defaultProducts = [
-  {
-    productId: "PRD-001",
-    productName: "아세트정 500mg",
-    approvalNumber: "2024-1234",
-    companyName: "대한제약",
-    manufacturingType: "자사제조",
-    dosageForm: "정제",
-    ctdConverted: true,
-    status: "허가",
-    ctdItems: createCtdItems()
-  }
-];
-
-function loadProducts() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-
-  if (!saved) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultProducts));
-    return defaultProducts;
-  }
-
-  return JSON.parse(saved);
+function generateProductId() {
+  return "PRD-" + Date.now();
 }
 
-function saveProducts(products) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+async function loadProducts() {
+  const snapshot = await getDocs(collection(db, PRODUCTS_COLLECTION));
+
+  return snapshot.docs.map(docSnap => ({
+    productId: docSnap.id,
+    ...docSnap.data()
+  }));
+}
+
+async function getProductById(productId) {
+  const docRef = doc(db, PRODUCTS_COLLECTION, productId);
+  const docSnap = await getDoc(docRef);
+
+  if (!docSnap.exists()) return null;
+
+  return {
+    productId: docSnap.id,
+    ...docSnap.data()
+  };
+}
+
+async function saveProduct(product) {
+  const productId = product.productId || generateProductId();
+
+  const productData = {
+    ...product,
+    productId
+  };
+
+  await setDoc(doc(db, PRODUCTS_COLLECTION, productId), productData);
+
+  return productData;
+}
+
+async function saveProducts(products) {
+  for (const product of products) {
+    await saveProduct(product);
+  }
+}
+
+async function deleteProductById(productId) {
+  await deleteDoc(doc(db, PRODUCTS_COLLECTION, productId));
+}
+
+function subscribeProducts(callback) {
+  return onSnapshot(collection(db, PRODUCTS_COLLECTION), snapshot => {
+    const products = snapshot.docs.map(docSnap => ({
+      productId: docSnap.id,
+      ...docSnap.data()
+    }));
+
+    callback(products);
+  });
 }
 
 function getRequiredItems(product) {
@@ -134,3 +174,21 @@ function getCompletionRate(product) {
 
   return Math.round((getAvailableModuleCount(product) / requiredItems.length) * 100);
 }
+
+export {
+  defaultCtdItems,
+  createCtdItems,
+  generateProductId,
+  loadProducts,
+  getProductById,
+  saveProduct,
+  saveProducts,
+  deleteProductById,
+  subscribeProducts,
+  getRequiredItems,
+  getAvailableModuleCount,
+  getNewVersionItems,
+  getNewVersionRate,
+  isComplete,
+  getCompletionRate
+};
