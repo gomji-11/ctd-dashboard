@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CTD 품목 상세 관리</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/data.js"></script>
+</head>
+
+<body class="bg-slate-100 text-slate-900">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+
+    <div class="flex justify-between items-center mb-6">
+      <a href="index.html" class="text-blue-600 hover:underline">
+        ← 대시보드로 돌아가기
+      </a>
+
+      <button
+        id="printReportBtn"
+        class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700"
+      >
+        PDF 보고서 출력
+      </button>
+    </div>
+
+    <header class="mt-6 mb-8">
+      <h1 id="productName" class="text-3xl font-bold"></h1>
+      <p id="productMeta" class="text-slate-500 mt-2"></p>
+    </header>
+
+    <section class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-sm text-slate-500">필수 항목 구비율</p>
+        <p id="completionRate" class="text-3xl font-bold mt-2 text-emerald-600"></p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-sm text-slate-500">신버전 반영률</p>
+        <p id="newVersionRate" class="text-3xl font-bold mt-2 text-blue-600"></p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-sm text-slate-500">제조구분</p>
+        <p id="manufacturingType" class="text-3xl font-bold mt-2"></p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-sm text-slate-500">수탁제조사</p>
+        <p id="contractorManufacturer" class="text-3xl font-bold mt-2"></p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-sm text-slate-500">제형</p>
+        <p id="dosageForm" class="text-3xl font-bold mt-2"></p>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow overflow-hidden">
+      <div class="p-6 border-b">
+        <h2 class="text-lg font-semibold">CTD 세부 항목 구비현황</h2>
+        <p class="text-sm text-slate-500 mt-1">
+          Module별로 필수 항목은 항상 표시되며, 선택 항목은 펼쳐서 확인할 수 있습니다.
+        </p>
+      </div>
+
+      <div id="moduleContainer" class="divide-y divide-slate-100"></div>
+    </section>
+
+  </div>
+
+  <script src="js/detail.js"></script>
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CTD 구비현황 대시보드</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/data.js"></script>
+</head>
+
+<body class="bg-slate-100 text-slate-900">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+
+    <header class="mb-8">
+      <h1 class="text-3xl font-bold">CTD 구비현황 대시보드</h1>
+      <p class="text-slate-500 mt-2">허가 품목별 CTD 필수 항목 및 신버전 반영 현황 관리</p>
+    </header>
+
+    <section class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-sm text-slate-500">전체 품목</p>
+        <p id="totalProducts" class="text-4xl font-bold mt-2">0</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-sm text-slate-500">구비 완료</p>
+        <p id="completeProducts" class="text-4xl font-bold mt-2 text-emerald-600">0</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-sm text-slate-500">미완료</p>
+        <p id="incompleteProducts" class="text-4xl font-bold mt-2 text-rose-600">0</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-sm text-slate-500">CTD 전환</p>
+        <p id="convertedProducts" class="text-4xl font-bold mt-2 text-blue-600">0</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6">
+        <p class="text-sm text-slate-500">평균 신버전 반영률</p>
+        <p id="averageNewVersionRate" class="text-4xl font-bold mt-2 text-indigo-600">0%</p>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div class="bg-white rounded-2xl shadow p-6">
+        <h2 class="text-lg font-semibold mb-4">전체 구비 완료 / 미완료 현황</h2>
+        <canvas id="completionChart"></canvas>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6">
+        <h2 class="text-lg font-semibold mb-4">CTD 전환 vs CTD 미전환 품목 현황</h2>
+        <canvas id="conversionChart"></canvas>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow overflow-hidden">
+      <div class="p-6 border-b flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 class="text-xl font-bold">품목 리스트</h2>
+          <p class="text-sm text-slate-500 mt-1">검색, 필터, 정렬, 품목 추가/수정/삭제가 가능합니다.</p>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button id="openAddModalBtn" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700">
+            + 품목 추가
+          </button>
+
+          <button id="backupDataBtn" class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm hover:bg-emerald-700">
+            JSON 백업
+          </button>
+
+          <label class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700 cursor-pointer">
+            JSON 불러오기
+            <input id="importDataInput" type="file" accept=".json" class="hidden" />
+          </label>
+
+          <button id="downloadCsvBtn" class="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm hover:bg-slate-800">
+            CSV 다운로드
+          </button>
+        </div>
+      </div>
+
+      <div class="p-6 border-b flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="품목명 / 허가번호 / 수탁제조사 검색"
+          class="border rounded-xl px-4 py-3 w-full xl:w-[420px]"
+        />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full xl:w-auto">
+          <select id="manufacturingFilter" class="border rounded-xl px-3 py-3">
+            <option value="">제조구분 전체</option>
+            <option value="자사제조">자사제조</option>
+            <option value="위탁제조">위탁제조</option>
+          </select>
+
+          <select id="ctdFilter" class="border rounded-xl px-3 py-3">
+            <option value="">CTD 전체</option>
+            <option value="true">CTD 전환</option>
+            <option value="false">CTD 미전환</option>
+          </select>
+
+          <select id="statusFilter" class="border rounded-xl px-3 py-3">
+            <option value="">허가 상태 전체</option>
+            <option value="허가">허가</option>
+            <option value="진행중">진행중</option>
+            <option value="보류">보류</option>
+            <option value="none">상태 없음</option>
+          </select>
+
+          <select id="sortFilter" class="border rounded-xl px-3 py-3">
+            <option value="ctdNewHigh">CTD 전환 + 신버전 반영률 높은 순</option>
+            <option value="newHigh">신버전 반영률 높은 순</option>
+            <option value="newLow">신버전 반영률 낮은 순</option>
+            <option value="completionHigh">필수 구비율 높은 순</option>
+            <option value="completionLow">필수 구비율 낮은 순</option>
+            <option value="nameAsc">품목명 가나다순</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-[1180px] w-full text-sm">
+          <thead class="bg-slate-100 text-slate-700">
+            <tr>
+              <th class="px-5 py-4 text-left w-[180px]">품목명</th>
+              <th class="px-4 py-4 text-center w-[95px]">허가<br />번호</th>
+              <th class="px-4 py-4 text-center w-[115px]">제조구분</th>
+              <th class="px-4 py-4 text-center w-[120px]">수탁제조사</th>
+              <th class="px-4 py-4 text-center w-[80px]">제형</th>
+              <th class="px-4 py-4 text-center w-[115px]">CTD 전환</th>
+              <th class="px-4 py-4 text-center w-[135px]">필수 구비율</th>
+              <th class="px-4 py-4 text-center w-[135px]">신버전 반영률</th>
+              <th class="px-4 py-4 text-center w-[90px]">허가<br />상태</th>
+              <th class="px-4 py-4 text-center w-[75px]">관리</th>
+            </tr>
+          </thead>
+
+          <tbody id="productTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div id="productModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h2 id="modalTitle" class="text-xl font-bold">품목 추가</h2>
+        <button id="closeModalBtn" class="text-slate-400 hover:text-slate-700 text-2xl">&times;</button>
+      </div>
+
+      <form id="productForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input type="hidden" id="editingProductId" />
+
+        <div>
+          <label class="block text-sm font-medium mb-1">품목명</label>
+          <input id="productNameInput" type="text" required class="w-full border rounded-lg px-3 py-2" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1">허가번호 (선택)</label>
+          <input id="approvalNumberInput" type="text" class="w-full border rounded-lg px-3 py-2" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1">제조구분</label>
+          <select id="manufacturingTypeInput" class="w-full border rounded-lg px-3 py-2">
+            <option value="자사제조">자사제조</option>
+            <option value="위탁제조">위탁제조</option>
+          </select>
+        </div>
+
+        <div id="contractorField" class="hidden">
+          <label class="block text-sm font-medium mb-1">수탁제조사</label>
+          <input id="contractorManufacturerInput" type="text" class="w-full border rounded-lg px-3 py-2" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1">제형</label>
+          <select id="dosageFormInput" class="w-full border rounded-lg px-3 py-2">
+            <option value="정제">정제</option>
+            <option value="캡슐제">캡슐제</option>
+            <option value="과립제">과립제</option>
+            <option value="산제">산제</option>
+            <option value="시럽제">시럽제</option>
+            <option value="액제">액제</option>
+            <option value="주사제">주사제</option>
+            <option value="점안제">점안제</option>
+            <option value="연고제">연고제</option>
+            <option value="크림제">크림제</option>
+            <option value="패취제">패취제</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1">CTD 전환 여부</label>
+          <select id="ctdConvertedInput" class="w-full border rounded-lg px-3 py-2">
+            <option value="true">CTD 전환</option>
+            <option value="false">CTD 미전환</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1">허가 상태 (선택)</label>
+          <select id="statusInput" class="w-full border rounded-lg px-3 py-2">
+            <option value="">선택 안함</option>
+            <option value="허가">허가</option>
+            <option value="진행중">진행중</option>
+            <option value="보류">보류</option>
+          </select>
+        </div>
+
+        <div class="md:col-span-2 flex justify-end gap-3 mt-4">
+          <button type="button" id="cancelBtn" class="px-4 py-2 rounded-lg border">취소</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">저장</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
