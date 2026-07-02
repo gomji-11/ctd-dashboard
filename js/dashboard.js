@@ -70,7 +70,7 @@ function getFilteredProducts() {
   const sort = document.getElementById("sortFilter").value;
 
   let filtered = products.filter(product => {
-    if (product.manufacturingType !== "자사제조") return false;
+    
     const searchTarget = [
       product.productName,
       product.approvalNumber,
