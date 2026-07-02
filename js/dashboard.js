@@ -115,10 +115,8 @@ function renderDashboard() {
   const notConvertedProducts = totalProducts - convertedProducts;
 
   document.getElementById("totalProducts").textContent = totalProducts;
-  document.getElementById("completeProducts").textContent = completeProducts;
-  document.getElementById("incompleteProducts").textContent = incompleteProducts;
   document.getElementById("convertedProducts").textContent = convertedProducts;
-  document.getElementById("averageNewVersionRate").textContent = `${getAverageNewVersionRate()}%`;
+  document.getElementById("averageCompletionRate").textContent = `${getAverageCompletionRate()}%`;
 
   if (completionChart) completionChart.destroy();
   if (conversionChart) conversionChart.destroy();
