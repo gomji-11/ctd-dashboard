@@ -29,8 +29,25 @@ async function init() {
     return;
   }
 
+  normalizeProductData();
+
   renderSummary();
   renderModules();
+}
+
+function normalizeProductData() {
+  if (!product.ctdItems) {
+    product.ctdItems = [];
+  }
+
+  product.ctdItems = product.ctdItems.map(item => ({
+    ...item,
+    ctdVersionStatus: item.ctdVersionStatus || "구버전",
+    versionNumber: item.versionNumber || "",
+    revisionDate: item.revisionDate || "",
+    available: item.available || false,
+    required: item.required || false
+  }));
 }
 
 function renderSummary() {
@@ -61,14 +78,21 @@ async function saveCurrentProduct() {
 function getItemsByModule() {
   return product.ctdItems.reduce((groups, item, index) => {
     if (!groups[item.module]) groups[item.module] = [];
-    groups[item.module].push({ ...item, index });
+
+    groups[item.module].push({
+      ...item,
+      index
+    });
+
     return groups;
   }, {});
 }
 
 async function setModuleRequired(moduleName, checked) {
   product.ctdItems.forEach(item => {
-    if (item.module === moduleName) item.required = checked;
+    if (item.module === moduleName) {
+      item.required = checked;
+    }
   });
 
   await saveCurrentProduct();
@@ -78,14 +102,15 @@ async function setModuleRequired(moduleName, checked) {
 
 async function setModuleAvailable(moduleName, checked) {
   product.ctdItems.forEach(item => {
-    if (item.module === moduleName) item.available = checked;
+    if (item.module === moduleName) {
+      item.available = checked;
+    }
   });
 
   await saveCurrentProduct();
   renderSummary();
   renderModules();
 }
-
 function renderModules() {
   const container = document.getElementById("moduleContainer");
   container.innerHTML = "";
@@ -134,13 +159,13 @@ function renderModules() {
       </div>
 
       <div class="overflow-x-auto">
-        <table class="min-w-full text-sm table-fixed">
+        <table class="min-w-[980px] w-full text-sm table-fixed">
           <thead class="bg-white text-slate-600 border-y">
             <tr>
-              <th class="px-4 py-3 text-left w-[110px]">코드</th>
-              <th class="px-4 py-3 text-left min-w-[360px]">제목</th>
+              <th class="px-4 py-3 text-left w-[100px]">코드</th>
+              <th class="px-4 py-3 text-left w-[300px]">제목</th>
 
-              <th class="px-4 py-3 text-center w-[110px]">
+              <th class="px-4 py-3 text-center w-[90px]">
                 <div class="flex items-center justify-center gap-2">
                   <span>필수</span>
                   <input
@@ -152,10 +177,11 @@ function renderModules() {
                 </div>
               </th>
 
-              <th class="px-4 py-3 text-left w-[150px]">현재 CTD 버전</th>
-              <th class="px-4 py-3 text-left w-[150px]">개정일</th>
+              <th class="px-4 py-3 text-left w-[140px]">현재 CTD 버전</th>
+              <th class="px-4 py-3 text-left w-[130px]">버전 번호</th>
+              <th class="px-4 py-3 text-left w-[130px]">개정일</th>
 
-              <th class="px-4 py-3 text-center w-[130px]">
+              <th class="px-4 py-3 text-center w-[120px]">
                 <div class="flex items-center justify-center gap-2">
                   <span>구비 완료</span>
                   <input
@@ -210,6 +236,16 @@ function renderModules() {
 
                 <td class="px-4 py-4">
                   <input
+                    type="text"
+                    class="version-number-input w-full border rounded-lg px-2 py-1"
+                    data-index="${item.index}"
+                    placeholder="예: v1.0"
+                    value="${item.versionNumber || ""}"
+                  />
+                </td>
+
+                <td class="px-4 py-4">
+                  <input
                     type="date"
                     class="revision-date-input w-full border rounded-lg px-2 py-1"
                     data-index="${item.index}"
@@ -237,7 +273,6 @@ function renderModules() {
 
   bindEvents();
 }
-
 function generateReportHtml() {
   const requiredCount = getRequiredItems(product).length;
   const availableCount = getAvailableModuleCount(product);
@@ -252,6 +287,7 @@ function generateReportHtml() {
         <td>${item.title}</td>
         <td>${item.required ? "필수" : "선택"}</td>
         <td>${item.ctdVersionStatus || "구버전"}</td>
+        <td>${item.versionNumber || "-"}</td>
         <td>${item.revisionDate || "-"}</td>
         <td>${item.available ? "구비" : "미구비"}</td>
       </tr>
@@ -266,6 +302,7 @@ function generateReportHtml() {
             <th>제목</th>
             <th>필수여부</th>
             <th>현재 CTD 버전</th>
+            <th>버전 번호</th>
             <th>개정일</th>
             <th>구비현황</th>
           </tr>
@@ -289,10 +326,7 @@ function generateReportHtml() {
           font-size: 12px;
         }
 
-        h1 {
-          font-size: 24px;
-          margin-bottom: 8px;
-        }
+        h1 { font-size: 24px; margin-bottom: 8px; }
 
         h2 {
           font-size: 16px;
@@ -350,12 +384,13 @@ function generateReportHtml() {
           font-weight: bold;
         }
 
-        th:nth-child(1), td:nth-child(1) { width: 90px; }
+        th:nth-child(1), td:nth-child(1) { width: 80px; }
         th:nth-child(2), td:nth-child(2) { width: auto; }
-        th:nth-child(3), td:nth-child(3) { width: 70px; text-align: center; }
-        th:nth-child(4), td:nth-child(4) { width: 95px; text-align: center; }
+        th:nth-child(3), td:nth-child(3) { width: 65px; text-align: center; }
+        th:nth-child(4), td:nth-child(4) { width: 90px; text-align: center; }
         th:nth-child(5), td:nth-child(5) { width: 90px; text-align: center; }
-        th:nth-child(6), td:nth-child(6) { width: 80px; text-align: center; }
+        th:nth-child(6), td:nth-child(6) { width: 85px; text-align: center; }
+        th:nth-child(7), td:nth-child(7) { width: 70px; text-align: center; }
 
         @media print {
           body { padding: 20px; }
@@ -478,6 +513,15 @@ function bindEvents() {
       await saveCurrentProduct();
       renderSummary();
       renderModules();
+    });
+  });
+
+  document.querySelectorAll(".version-number-input").forEach(input => {
+    input.addEventListener("change", async event => {
+      const index = Number(event.target.dataset.index);
+      product.ctdItems[index].versionNumber = event.target.value.trim();
+
+      await saveCurrentProduct();
     });
   });
 

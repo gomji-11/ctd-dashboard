@@ -80,6 +80,7 @@ function createCtdItems() {
   return defaultCtdItems.map(item => ({
     ...item,
     ctdVersionStatus: "구버전",
+    versionNumber: "",
     revisionDate: "",
     available: false
   }));

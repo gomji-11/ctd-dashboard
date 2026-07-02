@@ -16,6 +16,32 @@ let products = [];
 let completionChart = null;
 let conversionChart = null;
 
+const doughnutLabelPlugin = {
+  id: "doughnutLabelPlugin",
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    const dataset = chart.data.datasets[0];
+    const total = dataset.data.reduce((sum, value) => sum + value, 0);
+
+    chart.getDatasetMeta(0).data.forEach((arc, index) => {
+      const value = dataset.data[index];
+      if (value === 0) return;
+
+      const percentage = total === 0 ? 0 : Math.round((value / total) * 100);
+      const position = arc.tooltipPosition();
+
+      ctx.save();
+      ctx.fillStyle = "#111827";
+      ctx.font = "bold 13px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`${value}개`, position.x, position.y - 8);
+      ctx.font = "12px Arial";
+      ctx.fillText(`${percentage}%`, position.x, position.y + 8);
+      ctx.restore();
+    });
+  }
+};
 function getAverageNewVersionRate() {
   if (products.length === 0) return 0;
 
@@ -106,13 +132,15 @@ function renderDashboard() {
         backgroundColor: ["#10b981", "#e2e8f0"]
       }]
     },
-    options: {
+        options: {
+      cutout: "55%",
       plugins: {
         legend: {
           position: "bottom"
         }
       }
-    }
+    },
+    plugins: [doughnutLabelPlugin]
   });
 
   conversionChart = new Chart(document.getElementById("conversionChart"), {
@@ -124,13 +152,15 @@ function renderDashboard() {
         backgroundColor: ["#2563eb", "#f59e0b"]
       }]
     },
-    options: {
+        options: {
+      cutout: "55%",
       plugins: {
         legend: {
           position: "bottom"
         }
       }
-    }
+    },
+    plugins: [doughnutLabelPlugin]
   });
 
   renderProductTable();
