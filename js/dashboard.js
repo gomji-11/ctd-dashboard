@@ -52,13 +52,15 @@ function getAverageNewVersionRate() {
   return Math.round(totalRate / products.length);
 }
 function getAverageCompletionRate() {
-  if (products.length === 0) return 0;
+  const dashboardProducts = products.filter(product => product.manufacturingType === "자사제조");
 
-  const total = products.reduce((sum, product) => {
+  if (dashboardProducts.length === 0) return 0;
+
+  const total = dashboardProducts.reduce((sum, product) => {
     return sum + getCompletionRate(product);
   }, 0);
 
-  return Math.round(total / products.length);
+  return Math.round(total / dashboardProducts.length);
 }
 function getFilteredProducts() {
   const keyword = document.getElementById("searchInput").value.trim().toLowerCase();
@@ -68,6 +70,7 @@ function getFilteredProducts() {
   const sort = document.getElementById("sortFilter").value;
 
   let filtered = products.filter(product => {
+    if (product.manufacturingType !== "자사제조") return false;
     const searchTarget = [
       product.productName,
       product.approvalNumber,
@@ -116,11 +119,13 @@ function getFilteredProducts() {
 }
 
 function renderDashboard() {
-  const totalProducts = products.length;
-  const completeProducts = products.filter(isComplete).length;
-  const incompleteProducts = totalProducts - completeProducts;
-  const convertedProducts = products.filter(product => product.ctdConverted).length;
-  const notConvertedProducts = totalProducts - convertedProducts;
+ const dashboardProducts = products.filter(product => product.manufacturingType === "자사제조");
+
+const totalProducts = dashboardProducts.length;
+const completeProducts = dashboardProducts.filter(isComplete).length;
+const incompleteProducts = totalProducts - completeProducts;
+const convertedProducts = dashboardProducts.filter(product => product.ctdConverted).length;
+const notConvertedProducts = totalProducts - convertedProducts;
 
   const totalEl = document.getElementById("totalProducts");
 const convertedEl = document.getElementById("convertedProducts");
