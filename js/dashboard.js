@@ -122,9 +122,13 @@ function renderDashboard() {
   const convertedProducts = products.filter(product => product.ctdConverted).length;
   const notConvertedProducts = totalProducts - convertedProducts;
 
-  document.getElementById("totalProducts").textContent = totalProducts;
-  document.getElementById("convertedProducts").textContent = convertedProducts;
-  document.getElementById("averageCompletionRate").textContent = `${getAverageCompletionRate()}%`;
+  const totalEl = document.getElementById("totalProducts");
+const convertedEl = document.getElementById("convertedProducts");
+const averageEl = document.getElementById("averageNewVersionRate");
+
+if (totalEl) totalEl.textContent = totalProducts;
+if (convertedEl) convertedEl.textContent = convertedProducts;
+if (averageEl) averageEl.textContent = `${getAverageCompletionRate()}%`;
 
   if (completionChart) completionChart.destroy();
   if (conversionChart) conversionChart.destroy();
