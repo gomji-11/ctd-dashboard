@@ -51,7 +51,15 @@ function getAverageNewVersionRate() {
 
   return Math.round(totalRate / products.length);
 }
+function getAverageCompletionRate() {
+  if (products.length === 0) return 0;
 
+  const total = products.reduce((sum, product) => {
+    return sum + getCompletionRate(product);
+  }, 0);
+
+  return Math.round(total / products.length);
+}
 function getFilteredProducts() {
   const keyword = document.getElementById("searchInput").value.trim().toLowerCase();
   const manufacturing = document.getElementById("manufacturingFilter").value;
