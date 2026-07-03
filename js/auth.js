@@ -110,7 +110,7 @@ function renderLoginScreen() {
       <div class="bg-white w-full max-w-md rounded-2xl shadow p-8">
         <div class="text-center mb-6">
           <h1 class="text-2xl font-bold mb-2">CTD 구비현황 관리시스템</h1>
-          <p class="text-slate-500">Aju Healthcare · v1.1</p>
+          <p class="text-slate-500">Aju Healthcare · v1.1.1</p>
         </div>
 
         <label class="block text-sm font-medium mb-2">비밀번호</label>
@@ -246,17 +246,26 @@ function ensurePasswordModal() {
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium mb-1">현재 관리자 비밀번호</label>
-          <input id="currentAdminPasswordInput" type="password" class="w-full border rounded-lg px-3 py-2" />
+          <div class="flex gap-2">
+            <input id="currentAdminPasswordInput" type="password" class="flex-1 border rounded-lg px-3 py-2" />
+            <button type="button" class="toggle-password px-3 py-2 rounded-lg border text-sm" data-target="currentAdminPasswordInput">보기</button>
+          </div>
         </div>
 
         <div>
           <label class="block text-sm font-medium mb-1">새 관리자 비밀번호</label>
-          <input id="newAdminPasswordInput" type="password" placeholder="변경하지 않으려면 비워두세요" class="w-full border rounded-lg px-3 py-2" />
+          <div class="flex gap-2">
+            <input id="newAdminPasswordInput" type="password" placeholder="변경하지 않으려면 비워두세요" class="flex-1 border rounded-lg px-3 py-2" />
+            <button type="button" class="toggle-password px-3 py-2 rounded-lg border text-sm" data-target="newAdminPasswordInput">보기</button>
+          </div>
         </div>
 
         <div>
           <label class="block text-sm font-medium mb-1">새 조회용 비밀번호</label>
-          <input id="newViewerPasswordInput" type="password" placeholder="변경하지 않으려면 비워두세요" class="w-full border rounded-lg px-3 py-2" />
+          <div class="flex gap-2">
+            <input id="newViewerPasswordInput" type="password" placeholder="변경하지 않으려면 비워두세요" class="flex-1 border rounded-lg px-3 py-2" />
+            <button type="button" class="toggle-password px-3 py-2 rounded-lg border text-sm" data-target="newViewerPasswordInput">보기</button>
+          </div>
         </div>
       </div>
 
@@ -274,6 +283,17 @@ function ensurePasswordModal() {
   document.getElementById("closePasswordModalBtn").addEventListener("click", closePasswordModal);
   document.getElementById("cancelPasswordChangeBtn").addEventListener("click", closePasswordModal);
   document.getElementById("savePasswordChangeBtn").addEventListener("click", savePasswordChange);
+
+  document.querySelectorAll(".toggle-password").forEach(button => {
+    button.addEventListener("click", () => {
+      const target = document.getElementById(button.dataset.target);
+      if (!target) return;
+
+      const isPassword = target.type === "password";
+      target.type = isPassword ? "text" : "password";
+      button.textContent = isPassword ? "숨기기" : "보기";
+    });
+  });
 }
 
 function openPasswordModal() {
@@ -309,11 +329,6 @@ async function savePasswordChange() {
     return;
   }
 
-  if ((newAdminPassword && newAdminPassword.length < 4) || (newViewerPassword && newViewerPassword.length < 4)) {
-    errorEl.textContent = "비밀번호는 최소 4자 이상으로 입력하세요.";
-    errorEl.classList.remove("hidden");
-    return;
-  }
 
   await saveAuthSettings({
     adminPassword: newAdminPassword || settings.adminPassword,
