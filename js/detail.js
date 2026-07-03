@@ -1,4 +1,11 @@
 import {
+  requireLogin,
+  getUserRole,
+  isAdmin,
+  logout
+} from "./auth.js";
+
+import {
   getProductById,
   saveProduct,
   getRequiredItems,
@@ -19,6 +26,25 @@ let openedModules = {
   "Module 4": false,
   "Module 5": false
 };
+
+function addAuthBar() {
+  const existing = document.getElementById("authBar");
+  if (existing) return;
+
+  const role = getUserRole();
+  const roleText = role === "admin" ? "관리자" : "조회전용";
+
+  const bar = document.createElement("div");
+  bar.id = "authBar";
+  bar.className = "fixed top-4 right-4 z-50 flex items-center gap-2 bg-white border rounded-xl shadow px-3 py-2 text-sm";
+  bar.innerHTML = `
+    <span class="text-slate-600">${roleText}</span>
+    <button id="logoutBtn" class="px-2 py-1 rounded-lg bg-slate-700 text-white text-xs hover:bg-slate-800">로그아웃</button>
+  `;
+
+  document.body.appendChild(bar);
+  document.getElementById("logoutBtn").addEventListener("click", logout);
+}
 
 async function init() {
   product = await getProductById(productId);
@@ -42,11 +68,11 @@ function normalizeProductData() {
 
   product.ctdItems = product.ctdItems.map(item => ({
     ...item,
-    ctdVersionStatus: item.ctdVersionStatus || "구버전",
-    versionNumber: item.versionNumber || "",
-    revisionDate: item.revisionDate || "",
-    available: item.available || false,
-    required: item.required || false
+    ctdVersionStatus: item.ctdVersionStatus ?? "구버전",
+    versionNumber: item.versionNumber ?? "",
+    revisionDate: item.revisionDate ?? "",
+    available: item.available ?? false,
+    required: item.required ?? false
   }));
 }
 
@@ -72,6 +98,7 @@ function renderSummary() {
 }
 
 async function saveCurrentProduct() {
+  if (!isAdmin()) return;
   await saveProduct(product);
 }
 
@@ -89,6 +116,7 @@ function getItemsByModule() {
 }
 
 async function setModuleRequired(moduleName, checked) {
+  if (!isAdmin()) return;
   product.ctdItems.forEach(item => {
     if (item.module === moduleName) {
       item.required = checked;
@@ -101,6 +129,7 @@ async function setModuleRequired(moduleName, checked) {
 }
 
 async function setModuleAvailable(moduleName, checked) {
+  if (!isAdmin()) return;
   product.ctdItems.forEach(item => {
     if (item.module === moduleName) {
       item.available = checked;
@@ -114,6 +143,10 @@ async function setModuleAvailable(moduleName, checked) {
 function renderModules() {
   const container = document.getElementById("moduleContainer");
   container.innerHTML = "";
+
+  const admin = isAdmin();
+  const disabledAttr = admin ? "" : "disabled";
+  const readonlyClass = admin ? "" : "bg-slate-100 text-slate-500 cursor-not-allowed";
 
   const groups = getItemsByModule();
 
@@ -170,8 +203,9 @@ function renderModules() {
                   <span>필수</span>
                   <input
                     type="checkbox"
-                    class="module-required-toggle w-4 h-4 accent-rose-600 cursor-pointer"
+                    class="module-required-toggle w-4 h-4 accent-rose-600 cursor-pointer ${readonlyClass}"
                     data-module="${moduleName}"
+                    ${disabledAttr}
                     ${allRequiredChecked ? "checked" : ""}
                   />
                 </div>
@@ -186,8 +220,9 @@ function renderModules() {
                   <span>구비 완료</span>
                   <input
                     type="checkbox"
-                    class="module-available-toggle w-4 h-4 accent-emerald-600 cursor-pointer"
+                    class="module-available-toggle w-4 h-4 accent-emerald-600 cursor-pointer ${readonlyClass}"
                     data-module="${moduleName}"
+                    ${disabledAttr}
                     ${allAvailableChecked ? "checked" : ""}
                   />
                 </div>
@@ -214,20 +249,22 @@ function renderModules() {
                 <td class="px-4 py-4 text-center">
                   <input
                     type="checkbox"
-                    class="required-checkbox w-5 h-5 accent-rose-600 cursor-pointer"
+                    class="required-checkbox w-5 h-5 accent-rose-600 cursor-pointer ${readonlyClass}"
                     data-index="${item.index}"
+                    ${disabledAttr}
                     ${item.required ? "checked" : ""}
                   />
                 </td>
 
                 <td class="px-4 py-4">
                   <select
-                    class="version-status-select w-full border rounded-lg px-2 py-1 ${
+                    class="version-status-select w-full border rounded-lg px-2 py-1 ${readonlyClass} ${
                       item.ctdVersionStatus === "신버전"
                         ? "bg-emerald-50 text-emerald-700 border-emerald-300"
                         : "bg-amber-50 text-amber-700 border-amber-300"
                     }"
                     data-index="${item.index}"
+                    ${disabledAttr}
                   >
                     <option value="구버전" ${item.ctdVersionStatus === "구버전" ? "selected" : ""}>구버전</option>
                     <option value="신버전" ${item.ctdVersionStatus === "신버전" ? "selected" : ""}>신버전</option>
@@ -237,8 +274,9 @@ function renderModules() {
                 <td class="px-4 py-4">
                   <input
                     type="text"
-                    class="version-number-input w-full border rounded-lg px-2 py-1"
+                    class="version-number-input w-full border rounded-lg px-2 py-1 ${readonlyClass}"
                     data-index="${item.index}"
+                    ${disabledAttr}
                     placeholder="예: v1.0"
                     value="${item.versionNumber || ""}"
                   />
@@ -247,8 +285,9 @@ function renderModules() {
                 <td class="px-4 py-4">
                   <input
                     type="date"
-                    class="revision-date-input w-full border rounded-lg px-2 py-1"
+                    class="revision-date-input w-full border rounded-lg px-2 py-1 ${readonlyClass}"
                     data-index="${item.index}"
+                    ${disabledAttr}
                     value="${item.revisionDate || ""}"
                   />
                 </td>
@@ -256,8 +295,9 @@ function renderModules() {
                 <td class="px-4 py-4 text-center">
                   <input
                     type="checkbox"
-                    class="available-checkbox w-5 h-5 accent-emerald-600 cursor-pointer"
+                    class="available-checkbox w-5 h-5 accent-emerald-600 cursor-pointer ${readonlyClass}"
                     data-index="${item.index}"
+                    ${disabledAttr}
                     ${item.available ? "checked" : ""}
                   />
                 </td>
@@ -482,6 +522,7 @@ function bindEvents() {
 
   document.querySelectorAll(".module-required-toggle").forEach(checkbox => {
     checkbox.addEventListener("change", async event => {
+      if (!isAdmin()) return;
       const moduleName = event.target.dataset.module;
       await setModuleRequired(moduleName, event.target.checked);
     });
@@ -489,6 +530,7 @@ function bindEvents() {
 
   document.querySelectorAll(".module-available-toggle").forEach(checkbox => {
     checkbox.addEventListener("change", async event => {
+      if (!isAdmin()) return;
       const moduleName = event.target.dataset.module;
       await setModuleAvailable(moduleName, event.target.checked);
     });
@@ -496,6 +538,7 @@ function bindEvents() {
 
   document.querySelectorAll(".required-checkbox").forEach(checkbox => {
     checkbox.addEventListener("change", async event => {
+      if (!isAdmin()) return;
       const index = Number(event.target.dataset.index);
       product.ctdItems[index].required = event.target.checked;
 
@@ -507,6 +550,7 @@ function bindEvents() {
 
   document.querySelectorAll(".version-status-select").forEach(select => {
     select.addEventListener("change", async event => {
+      if (!isAdmin()) return;
       const index = Number(event.target.dataset.index);
       product.ctdItems[index].ctdVersionStatus = event.target.value;
 
@@ -518,6 +562,7 @@ function bindEvents() {
 
   document.querySelectorAll(".version-number-input").forEach(input => {
     input.addEventListener("change", async event => {
+      if (!isAdmin()) return;
       const index = Number(event.target.dataset.index);
       product.ctdItems[index].versionNumber = event.target.value.trim();
 
@@ -527,6 +572,7 @@ function bindEvents() {
 
   document.querySelectorAll(".revision-date-input").forEach(input => {
     input.addEventListener("change", async event => {
+      if (!isAdmin()) return;
       const index = Number(event.target.dataset.index);
       product.ctdItems[index].revisionDate = event.target.value;
 
@@ -536,6 +582,7 @@ function bindEvents() {
 
   document.querySelectorAll(".available-checkbox").forEach(checkbox => {
     checkbox.addEventListener("change", async event => {
+      if (!isAdmin()) return;
       const index = Number(event.target.dataset.index);
       product.ctdItems[index].available = event.target.checked;
 
@@ -546,6 +593,8 @@ function bindEvents() {
   });
 }
 
-document.getElementById("printReportBtn").addEventListener("click", printPdfReport);
-
-init();
+if (requireLogin()) {
+  addAuthBar();
+  document.getElementById("printReportBtn").addEventListener("click", printPdfReport);
+  init();
+}

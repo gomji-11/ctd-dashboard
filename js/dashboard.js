@@ -1,4 +1,11 @@
 import {
+  requireLogin,
+  getUserRole,
+  isAdmin,
+  logout
+} from "./auth.js";
+
+import {
   createCtdItems,
   generateProductId,
   saveProduct,
@@ -15,6 +22,37 @@ import {
 let products = [];
 let completionChart = null;
 let conversionChart = null;
+
+function addAuthBar() {
+  const existing = document.getElementById("authBar");
+  if (existing) return;
+
+  const role = getUserRole();
+  const roleText = role === "admin" ? "관리자" : "조회전용";
+
+  const bar = document.createElement("div");
+  bar.id = "authBar";
+  bar.className = "fixed top-4 right-4 z-50 flex items-center gap-2 bg-white border rounded-xl shadow px-3 py-2 text-sm";
+  bar.innerHTML = `
+    <span class="text-slate-600">${roleText}</span>
+    <button id="logoutBtn" class="px-2 py-1 rounded-lg bg-slate-700 text-white text-xs hover:bg-slate-800">로그아웃</button>
+  `;
+
+  document.body.appendChild(bar);
+  document.getElementById("logoutBtn").addEventListener("click", logout);
+}
+
+function applyRoleToDashboard() {
+  const admin = isAdmin();
+
+  const addBtn = document.getElementById("openAddModalBtn");
+  const importLabel = document.getElementById("importDataInput")?.closest("label");
+
+  [addBtn, importLabel].forEach(element => {
+    if (!element) return;
+    element.classList.toggle("hidden", !admin);
+  });
+}
 
 const doughnutLabelPlugin = {
   id: "doughnutLabelPlugin",
@@ -179,6 +217,7 @@ if (averageEl) averageEl.textContent = `${getAverageCompletionRate()}%`;
   });
 
   renderProductTable();
+  applyRoleToDashboard();
 }
 
 function renderProductTable() {
@@ -274,12 +313,14 @@ function renderProductTable() {
       </td>
 
       <td class="px-4 py-6 text-center align-middle whitespace-nowrap">
-        <button onclick="openEditModal('${product.productId}')" class="block mx-auto text-blue-600 hover:underline mb-2">
-          수정
-        </button>
-        <button onclick="deleteProduct('${product.productId}')" class="block mx-auto text-rose-600 hover:underline">
-          삭제
-        </button>
+        ${isAdmin() ? `
+          <button onclick="openEditModal('${product.productId}')" class="block mx-auto text-blue-600 hover:underline mb-2">
+            수정
+          </button>
+          <button onclick="deleteProduct('${product.productId}')" class="block mx-auto text-rose-600 hover:underline">
+            삭제
+          </button>
+        ` : `<span class="text-slate-400 text-xs">조회전용</span>`}
       </td>
     `;
 
@@ -303,6 +344,7 @@ function toggleContractorField() {
 }
 
 function openAddModal() {
+  if (!isAdmin()) return;
   document.getElementById("modalTitle").textContent = "품목 추가";
   document.getElementById("productForm").reset();
   document.getElementById("editingProductId").value = "";
@@ -311,6 +353,7 @@ function openAddModal() {
 }
 
 function openEditModal(productId) {
+  if (!isAdmin()) return;
   const product = products.find(item => item.productId === productId);
   if (!product) return;
 
@@ -334,6 +377,7 @@ function closeModal() {
 }
 
 async function deleteProduct(productId) {
+  if (!isAdmin()) return;
   const product = products.find(item => item.productId === productId);
   if (!product) return;
 
@@ -358,6 +402,7 @@ function backupData() {
 }
 
 async function importData(event) {
+  if (!isAdmin()) return;
   const file = event.target.files[0];
   if (!file) return;
 
@@ -456,60 +501,65 @@ function downloadCsv() {
   URL.revokeObjectURL(url);
 }
 
-document.getElementById("openAddModalBtn").addEventListener("click", openAddModal);
-document.getElementById("closeModalBtn").addEventListener("click", closeModal);
-document.getElementById("cancelBtn").addEventListener("click", closeModal);
-document.getElementById("manufacturingTypeInput").addEventListener("change", toggleContractorField);
+if (requireLogin()) {
+  addAuthBar();
 
-document.getElementById("searchInput").addEventListener("input", renderProductTable);
-document.getElementById("manufacturingFilter").addEventListener("change", renderProductTable);
-document.getElementById("ctdFilter").addEventListener("change", renderProductTable);
-document.getElementById("statusFilter").addEventListener("change", renderProductTable);
-document.getElementById("sortFilter").addEventListener("change", renderProductTable);
+  document.getElementById("openAddModalBtn").addEventListener("click", openAddModal);
+  document.getElementById("closeModalBtn").addEventListener("click", closeModal);
+  document.getElementById("cancelBtn").addEventListener("click", closeModal);
+  document.getElementById("manufacturingTypeInput").addEventListener("change", toggleContractorField);
 
-document.getElementById("backupDataBtn").addEventListener("click", backupData);
-document.getElementById("importDataInput").addEventListener("change", importData);
-document.getElementById("downloadCsvBtn").addEventListener("click", downloadCsv);
+  document.getElementById("searchInput").addEventListener("input", renderProductTable);
+  document.getElementById("manufacturingFilter").addEventListener("change", renderProductTable);
+  document.getElementById("ctdFilter").addEventListener("change", renderProductTable);
+  document.getElementById("statusFilter").addEventListener("change", renderProductTable);
+  document.getElementById("sortFilter").addEventListener("change", renderProductTable);
 
-document.getElementById("productForm").addEventListener("submit", async event => {
-  event.preventDefault();
+  document.getElementById("backupDataBtn").addEventListener("click", backupData);
+  document.getElementById("importDataInput").addEventListener("change", importData);
+  document.getElementById("downloadCsvBtn").addEventListener("click", downloadCsv);
 
-  const editingProductId = document.getElementById("editingProductId").value;
+  document.getElementById("productForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!isAdmin()) return;
 
-  const productData = {
-    productId: editingProductId || generateProductId(),
-    productName: document.getElementById("productNameInput").value.trim(),
-    approvalNumber: document.getElementById("approvalNumberInput").value.trim(),
-    manufacturingType: document.getElementById("manufacturingTypeInput").value,
-    contractorManufacturer: document.getElementById("manufacturingTypeInput").value === "위탁제조"
-      ? document.getElementById("contractorManufacturerInput").value.trim()
-      : "",
-    dosageForm: document.getElementById("dosageFormInput").value,
-    ctdConverted: document.getElementById("ctdConvertedInput").value === "true",
-    status: document.getElementById("statusInput").value
-  };
+    const editingProductId = document.getElementById("editingProductId").value;
 
-  if (editingProductId) {
-    const existingProduct = products.find(item => item.productId === editingProductId);
+    const productData = {
+      productId: editingProductId || generateProductId(),
+      productName: document.getElementById("productNameInput").value.trim(),
+      approvalNumber: document.getElementById("approvalNumberInput").value.trim(),
+      manufacturingType: document.getElementById("manufacturingTypeInput").value,
+      contractorManufacturer: document.getElementById("manufacturingTypeInput").value === "위탁제조"
+        ? document.getElementById("contractorManufacturerInput").value.trim()
+        : "",
+      dosageForm: document.getElementById("dosageFormInput").value,
+      ctdConverted: document.getElementById("ctdConvertedInput").value === "true",
+      status: document.getElementById("statusInput").value
+    };
 
-    await saveProduct({
-      ...existingProduct,
-      ...productData
-    });
-  } else {
-    await saveProduct({
-      ...productData,
-      ctdItems: createCtdItems()
-    });
-  }
+    if (editingProductId) {
+      const existingProduct = products.find(item => item.productId === editingProductId);
 
-  closeModal();
-});
+      await saveProduct({
+        ...existingProduct,
+        ...productData
+      });
+    } else {
+      await saveProduct({
+        ...productData,
+        ctdItems: createCtdItems()
+      });
+    }
 
-window.openEditModal = openEditModal;
-window.deleteProduct = deleteProduct;
+    closeModal();
+  });
 
-subscribeProducts(firebaseProducts => {
-  products = firebaseProducts;
-  renderDashboard();
-});
+  window.openEditModal = openEditModal;
+  window.deleteProduct = deleteProduct;
+
+  subscribeProducts(firebaseProducts => {
+    products = firebaseProducts;
+    renderDashboard();
+  });
+}
