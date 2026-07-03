@@ -32,9 +32,13 @@ async function getAuthSettings() {
     return cachedAuthSettings;
   }
 
+  const data = authSnap.data() || {};
+
   cachedAuthSettings = {
-    ...DEFAULT_AUTH_SETTINGS,
-    ...authSnap.data()
+    adminPassword: data.adminPassword || DEFAULT_AUTH_SETTINGS.adminPassword,
+    editorPassword: data.editorPassword || DEFAULT_AUTH_SETTINGS.editorPassword,
+    viewerPassword: data.viewerPassword || DEFAULT_AUTH_SETTINGS.viewerPassword,
+    updatedAt: data.updatedAt || DEFAULT_AUTH_SETTINGS.updatedAt
   };
 
   return cachedAuthSettings;
@@ -52,21 +56,22 @@ async function saveAuthSettings(settings) {
 }
 
 async function login(password) {
+  const inputPassword = String(password || "").trim();
   const settings = await getAuthSettings();
 
-  if (password === settings.adminPassword) {
+  if (inputPassword === settings.adminPassword) {
     sessionStorage.setItem(AUTH_KEY, "admin");
     sessionStorage.setItem(AUTH_TIME_KEY, String(Date.now()));
     return "admin";
   }
 
-  if (password === settings.editorPassword) {
+  if (inputPassword === settings.editorPassword) {
     sessionStorage.setItem(AUTH_KEY, "editor");
     sessionStorage.setItem(AUTH_TIME_KEY, String(Date.now()));
     return "editor";
   }
 
-  if (password === settings.viewerPassword) {
+  if (inputPassword === settings.viewerPassword) {
     sessionStorage.setItem(AUTH_KEY, "viewer");
     sessionStorage.setItem(AUTH_TIME_KEY, String(Date.now()));
     return "viewer";
@@ -130,7 +135,7 @@ function renderLoginScreen() {
       <div class="bg-white w-full max-w-md rounded-2xl shadow p-8">
         <div class="text-center mb-6">
           <h1 class="text-2xl font-bold mb-2">CTD 구비현황 관리시스템</h1>
-          <p class="text-slate-500">Aju Healthcare · v1.1.2</p>
+          <p class="text-slate-500">Aju Healthcare · v1.1.3</p>
         </div>
 
         <label class="block text-sm font-medium mb-2">비밀번호</label>
