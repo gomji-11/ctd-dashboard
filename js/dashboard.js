@@ -1,8 +1,8 @@
 import {
   requireLogin,
+  injectAuthBar,
   getUserRole,
-  isAdmin,
-  logout
+  isAdmin
 } from "./auth.js";
 
 import {
@@ -19,40 +19,15 @@ import {
   getCompletionRate
 } from "./data.js";
 
+if (!(await requireLogin())) {
+  throw new Error("Login required");
+}
+
+injectAuthBar();
+
 let products = [];
 let completionChart = null;
 let conversionChart = null;
-
-function addAuthBar() {
-  const existing = document.getElementById("authBar");
-  if (existing) return;
-
-  const role = getUserRole();
-  const roleText = role === "admin" ? "관리자" : "조회전용";
-
-  const bar = document.createElement("div");
-  bar.id = "authBar";
-  bar.className = "fixed top-4 right-4 z-50 flex items-center gap-2 bg-white border rounded-xl shadow px-3 py-2 text-sm";
-  bar.innerHTML = `
-    <span class="text-slate-600">${roleText}</span>
-    <button id="logoutBtn" class="px-2 py-1 rounded-lg bg-slate-700 text-white text-xs hover:bg-slate-800">로그아웃</button>
-  `;
-
-  document.body.appendChild(bar);
-  document.getElementById("logoutBtn").addEventListener("click", logout);
-}
-
-function applyRoleToDashboard() {
-  const admin = isAdmin();
-
-  const addBtn = document.getElementById("openAddModalBtn");
-  const importLabel = document.getElementById("importDataInput")?.closest("label");
-
-  [addBtn, importLabel].forEach(element => {
-    if (!element) return;
-    element.classList.toggle("hidden", !admin);
-  });
-}
 
 const doughnutLabelPlugin = {
   id: "doughnutLabelPlugin",
@@ -154,6 +129,28 @@ function getFilteredProducts() {
   });
 
   return filtered;
+}
+
+
+function applyRoleToDashboard() {
+  const role = getUserRole();
+  const adminMode = role === "admin";
+
+  const adminOnlyElements = [
+    document.getElementById("openAddModalBtn"),
+    document.getElementById("backupDataBtn"),
+    document.getElementById("downloadCsvBtn"),
+    document.getElementById("importDataInput")?.closest("label")
+  ];
+
+  adminOnlyElements.forEach(element => {
+    if (!element) return;
+    element.classList.toggle("hidden", !adminMode);
+  });
+
+  document.querySelectorAll(".admin-action").forEach(element => {
+    element.classList.toggle("hidden", !adminMode);
+  });
 }
 
 function renderDashboard() {
@@ -313,14 +310,12 @@ function renderProductTable() {
       </td>
 
       <td class="px-4 py-6 text-center align-middle whitespace-nowrap">
-        ${isAdmin() ? `
-          <button onclick="openEditModal('${product.productId}')" class="block mx-auto text-blue-600 hover:underline mb-2">
-            수정
-          </button>
-          <button onclick="deleteProduct('${product.productId}')" class="block mx-auto text-rose-600 hover:underline">
-            삭제
-          </button>
-        ` : `<span class="text-slate-400 text-xs">조회전용</span>`}
+        <button onclick="openEditModal('${product.productId}')" class="admin-action block mx-auto text-blue-600 hover:underline mb-2">
+          수정
+        </button>
+        <button onclick="deleteProduct('${product.productId}')" class="admin-action block mx-auto text-rose-600 hover:underline">
+          삭제
+        </button>
       </td>
     `;
 
@@ -501,65 +496,62 @@ function downloadCsv() {
   URL.revokeObjectURL(url);
 }
 
-if (requireLogin()) {
-  addAuthBar();
+document.getElementById("openAddModalBtn").addEventListener("click", openAddModal);
+document.getElementById("closeModalBtn").addEventListener("click", closeModal);
+document.getElementById("cancelBtn").addEventListener("click", closeModal);
+document.getElementById("manufacturingTypeInput").addEventListener("change", toggleContractorField);
 
-  document.getElementById("openAddModalBtn").addEventListener("click", openAddModal);
-  document.getElementById("closeModalBtn").addEventListener("click", closeModal);
-  document.getElementById("cancelBtn").addEventListener("click", closeModal);
-  document.getElementById("manufacturingTypeInput").addEventListener("change", toggleContractorField);
+document.getElementById("searchInput").addEventListener("input", renderProductTable);
+document.getElementById("manufacturingFilter").addEventListener("change", renderProductTable);
+document.getElementById("ctdFilter").addEventListener("change", renderProductTable);
+document.getElementById("statusFilter").addEventListener("change", renderProductTable);
+document.getElementById("sortFilter").addEventListener("change", renderProductTable);
 
-  document.getElementById("searchInput").addEventListener("input", renderProductTable);
-  document.getElementById("manufacturingFilter").addEventListener("change", renderProductTable);
-  document.getElementById("ctdFilter").addEventListener("change", renderProductTable);
-  document.getElementById("statusFilter").addEventListener("change", renderProductTable);
-  document.getElementById("sortFilter").addEventListener("change", renderProductTable);
+document.getElementById("backupDataBtn").addEventListener("click", backupData);
+document.getElementById("importDataInput").addEventListener("change", importData);
+document.getElementById("downloadCsvBtn").addEventListener("click", downloadCsv);
 
-  document.getElementById("backupDataBtn").addEventListener("click", backupData);
-  document.getElementById("importDataInput").addEventListener("change", importData);
-  document.getElementById("downloadCsvBtn").addEventListener("click", downloadCsv);
+document.getElementById("productForm").addEventListener("submit", async event => {
+  event.preventDefault();
 
-  document.getElementById("productForm").addEventListener("submit", async event => {
-    event.preventDefault();
-    if (!isAdmin()) return;
+  if (!isAdmin()) return;
 
-    const editingProductId = document.getElementById("editingProductId").value;
+  const editingProductId = document.getElementById("editingProductId").value;
 
-    const productData = {
-      productId: editingProductId || generateProductId(),
-      productName: document.getElementById("productNameInput").value.trim(),
-      approvalNumber: document.getElementById("approvalNumberInput").value.trim(),
-      manufacturingType: document.getElementById("manufacturingTypeInput").value,
-      contractorManufacturer: document.getElementById("manufacturingTypeInput").value === "위탁제조"
-        ? document.getElementById("contractorManufacturerInput").value.trim()
-        : "",
-      dosageForm: document.getElementById("dosageFormInput").value,
-      ctdConverted: document.getElementById("ctdConvertedInput").value === "true",
-      status: document.getElementById("statusInput").value
-    };
+  const productData = {
+    productId: editingProductId || generateProductId(),
+    productName: document.getElementById("productNameInput").value.trim(),
+    approvalNumber: document.getElementById("approvalNumberInput").value.trim(),
+    manufacturingType: document.getElementById("manufacturingTypeInput").value,
+    contractorManufacturer: document.getElementById("manufacturingTypeInput").value === "위탁제조"
+      ? document.getElementById("contractorManufacturerInput").value.trim()
+      : "",
+    dosageForm: document.getElementById("dosageFormInput").value,
+    ctdConverted: document.getElementById("ctdConvertedInput").value === "true",
+    status: document.getElementById("statusInput").value
+  };
 
-    if (editingProductId) {
-      const existingProduct = products.find(item => item.productId === editingProductId);
+  if (editingProductId) {
+    const existingProduct = products.find(item => item.productId === editingProductId);
 
-      await saveProduct({
-        ...existingProduct,
-        ...productData
-      });
-    } else {
-      await saveProduct({
-        ...productData,
-        ctdItems: createCtdItems()
-      });
-    }
+    await saveProduct({
+      ...existingProduct,
+      ...productData
+    });
+  } else {
+    await saveProduct({
+      ...productData,
+      ctdItems: createCtdItems()
+    });
+  }
 
-    closeModal();
-  });
+  closeModal();
+});
 
-  window.openEditModal = openEditModal;
-  window.deleteProduct = deleteProduct;
+window.openEditModal = openEditModal;
+window.deleteProduct = deleteProduct;
 
-  subscribeProducts(firebaseProducts => {
-    products = firebaseProducts;
-    renderDashboard();
-  });
-}
+subscribeProducts(firebaseProducts => {
+  products = firebaseProducts;
+  renderDashboard();
+});
