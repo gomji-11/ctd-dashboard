@@ -2,7 +2,7 @@ import {
   requireLogin,
   injectAuthBar,
   getUserRole,
-  isAdmin
+  canEditData
 } from "./auth.js";
 
 import {
@@ -134,7 +134,7 @@ function getFilteredProducts() {
 
 function applyRoleToDashboard() {
   const role = getUserRole();
-  const adminMode = role === "admin";
+  const editMode = canEditData();
 
   const adminOnlyElements = [
     document.getElementById("openAddModalBtn"),
@@ -145,11 +145,11 @@ function applyRoleToDashboard() {
 
   adminOnlyElements.forEach(element => {
     if (!element) return;
-    element.classList.toggle("hidden", !adminMode);
+    element.classList.toggle("hidden", !editMode);
   });
 
   document.querySelectorAll(".admin-action").forEach(element => {
-    element.classList.toggle("hidden", !adminMode);
+    element.classList.toggle("hidden", !editMode);
   });
 }
 
@@ -339,7 +339,7 @@ function toggleContractorField() {
 }
 
 function openAddModal() {
-  if (!isAdmin()) return;
+  if (!canEditData()) return;
   document.getElementById("modalTitle").textContent = "품목 추가";
   document.getElementById("productForm").reset();
   document.getElementById("editingProductId").value = "";
@@ -348,7 +348,7 @@ function openAddModal() {
 }
 
 function openEditModal(productId) {
-  if (!isAdmin()) return;
+  if (!canEditData()) return;
   const product = products.find(item => item.productId === productId);
   if (!product) return;
 
@@ -372,7 +372,7 @@ function closeModal() {
 }
 
 async function deleteProduct(productId) {
-  if (!isAdmin()) return;
+  if (!canEditData()) return;
   const product = products.find(item => item.productId === productId);
   if (!product) return;
 
@@ -397,7 +397,7 @@ function backupData() {
 }
 
 async function importData(event) {
-  if (!isAdmin()) return;
+  if (!canEditData()) return;
   const file = event.target.files[0];
   if (!file) return;
 
@@ -514,7 +514,7 @@ document.getElementById("downloadCsvBtn").addEventListener("click", downloadCsv)
 document.getElementById("productForm").addEventListener("submit", async event => {
   event.preventDefault();
 
-  if (!isAdmin()) return;
+  if (!canEditData()) return;
 
   const editingProductId = document.getElementById("editingProductId").value;
 

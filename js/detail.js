@@ -1,7 +1,7 @@
 import {
   requireLogin,
   injectAuthBar,
-  isAdmin
+  canEditData
 } from "./auth.js";
 
 import {
@@ -84,7 +84,7 @@ function renderSummary() {
 }
 
 async function saveCurrentProduct() {
-  if (!isAdmin()) return;
+  if (!canEditData()) return;
   await saveProduct(product);
 }
 
@@ -102,7 +102,7 @@ function getItemsByModule() {
 }
 
 async function setModuleRequired(moduleName, checked) {
-  if (!isAdmin()) return;
+  if (!canEditData()) return;
   product.ctdItems.forEach(item => {
     if (item.module === moduleName) {
       item.required = checked;
@@ -115,7 +115,7 @@ async function setModuleRequired(moduleName, checked) {
 }
 
 async function setModuleAvailable(moduleName, checked) {
-  if (!isAdmin()) return;
+  if (!canEditData()) return;
   product.ctdItems.forEach(item => {
     if (item.module === moduleName) {
       item.available = checked;
@@ -489,7 +489,7 @@ function printPdfReport() {
 
 
 function applyRoleToDetail() {
-  if (isAdmin()) return;
+  if (canEditData()) return;
 
   const editableSelectors = [
     ".module-required-toggle",

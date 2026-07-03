@@ -13,6 +13,7 @@ const AUTH_DOC_ID = "auth";
 
 const DEFAULT_AUTH_SETTINGS = {
   adminPassword: "admin1234",
+  editorPassword: "edit1234",
   viewerPassword: "view1234",
   updatedAt: new Date().toISOString()
 };
@@ -59,6 +60,12 @@ async function login(password) {
     return "admin";
   }
 
+  if (password === settings.editorPassword) {
+    sessionStorage.setItem(AUTH_KEY, "editor");
+    sessionStorage.setItem(AUTH_TIME_KEY, String(Date.now()));
+    return "editor";
+  }
+
   if (password === settings.viewerPassword) {
     sessionStorage.setItem(AUTH_KEY, "viewer");
     sessionStorage.setItem(AUTH_TIME_KEY, String(Date.now()));
@@ -100,8 +107,21 @@ function isAdmin() {
   return getUserRole() === "admin";
 }
 
+function isEditor() {
+  return getUserRole() === "editor";
+}
+
 function isViewer() {
   return getUserRole() === "viewer";
+}
+
+function canManagePasswords() {
+  return isAdmin();
+}
+
+function canEditData() {
+  const role = getUserRole();
+  return role === "admin" || role === "editor";
 }
 
 function renderLoginScreen() {
@@ -110,7 +130,7 @@ function renderLoginScreen() {
       <div class="bg-white w-full max-w-md rounded-2xl shadow p-8">
         <div class="text-center mb-6">
           <h1 class="text-2xl font-bold mb-2">CTD 구비현황 관리시스템</h1>
-          <p class="text-slate-500">Aju Healthcare · v1.1.1</p>
+          <p class="text-slate-500">Aju Healthcare · v1.1.2</p>
         </div>
 
         <label class="block text-sm font-medium mb-2">비밀번호</label>
@@ -134,7 +154,7 @@ function renderLoginScreen() {
         </p>
 
         <p class="text-xs text-slate-400 text-center mt-6">
-          관리자 또는 조회용 비밀번호로 접속할 수 있습니다.
+          관리자, 데이터 수정, 읽기 전용 비밀번호로 접속할 수 있습니다.
         </p>
       </div>
     </div>
@@ -184,7 +204,8 @@ async function requireLogin() {
 function getRoleLabel() {
   const role = getUserRole();
   if (role === "admin") return "관리자 모드";
-  if (role === "viewer") return "조회 모드";
+  if (role === "editor") return "데이터 수정 모드";
+  if (role === "viewer") return "읽기 전용 모드";
   return "로그인 필요";
 }
 
@@ -197,7 +218,9 @@ function injectAuthBar() {
   const role = getUserRole();
   const roleClass = role === "admin"
     ? "bg-blue-100 text-blue-700"
-    : "bg-slate-200 text-slate-700";
+    : role === "editor"
+      ? "bg-emerald-100 text-emerald-700"
+      : "bg-slate-200 text-slate-700";
 
   const authBar = document.createElement("div");
   authBar.id = "authBar";
@@ -261,7 +284,15 @@ function ensurePasswordModal() {
         </div>
 
         <div>
-          <label class="block text-sm font-medium mb-1">새 조회용 비밀번호</label>
+          <label class="block text-sm font-medium mb-1">새 데이터 수정 비밀번호</label>
+          <div class="flex gap-2">
+            <input id="newEditorPasswordInput" type="password" placeholder="변경하지 않으려면 비워두세요" class="flex-1 border rounded-lg px-3 py-2" />
+            <button type="button" class="toggle-password px-3 py-2 rounded-lg border text-sm" data-target="newEditorPasswordInput">보기</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1">새 읽기 전용 비밀번호</label>
           <div class="flex gap-2">
             <input id="newViewerPasswordInput" type="password" placeholder="변경하지 않으려면 비워두세요" class="flex-1 border rounded-lg px-3 py-2" />
             <button type="button" class="toggle-password px-3 py-2 rounded-lg border text-sm" data-target="newViewerPasswordInput">보기</button>
@@ -301,6 +332,7 @@ function openPasswordModal() {
   document.getElementById("passwordModal").classList.remove("hidden");
   document.getElementById("currentAdminPasswordInput").value = "";
   document.getElementById("newAdminPasswordInput").value = "";
+  document.getElementById("newEditorPasswordInput").value = "";
   document.getElementById("newViewerPasswordInput").value = "";
   document.getElementById("passwordChangeError").classList.add("hidden");
 }
@@ -313,6 +345,7 @@ async function savePasswordChange() {
   const errorEl = document.getElementById("passwordChangeError");
   const currentPassword = document.getElementById("currentAdminPasswordInput").value;
   const newAdminPassword = document.getElementById("newAdminPasswordInput").value.trim();
+  const newEditorPassword = document.getElementById("newEditorPasswordInput").value.trim();
   const newViewerPassword = document.getElementById("newViewerPasswordInput").value.trim();
 
   const settings = await getAuthSettings();
@@ -323,15 +356,15 @@ async function savePasswordChange() {
     return;
   }
 
-  if (!newAdminPassword && !newViewerPassword) {
+  if (!newAdminPassword && !newEditorPassword && !newViewerPassword) {
     errorEl.textContent = "변경할 새 비밀번호를 하나 이상 입력하세요.";
     errorEl.classList.remove("hidden");
     return;
   }
 
-
   await saveAuthSettings({
     adminPassword: newAdminPassword || settings.adminPassword,
+    editorPassword: newEditorPassword || settings.editorPassword,
     viewerPassword: newViewerPassword || settings.viewerPassword
   });
 
@@ -344,7 +377,10 @@ export {
   logout,
   getUserRole,
   isAdmin,
+  isEditor,
   isViewer,
+  canManagePasswords,
+  canEditData,
   requireLogin,
   injectAuthBar,
   getAuthSettings,
