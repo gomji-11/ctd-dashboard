@@ -245,8 +245,8 @@ function renderProductTable() {
     row.className = "hover:bg-slate-50";
 
     row.innerHTML = `
-      <td class="px-5 py-6 align-middle">
-        <a href="detail.html?id=${product.productId}" class="text-blue-600 hover:underline font-medium break-keep">
+      <td class="px-5 py-6 align-middle w-[260px]">
+        <a href="detail.html?id=${product.productId}" class="text-blue-600 hover:underline font-medium whitespace-normal break-words leading-5 block" title="${product.productName}">
           ${product.productName}
         </a>
       </td>
