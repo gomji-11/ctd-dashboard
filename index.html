@@ -15,24 +15,34 @@
 
     <header class="mb-8">
       <h1 class="text-3xl font-bold">CTD 구비현황 대시보드(자사)</h1>
-      <p class="text-slate-500 mt-2">Aju Healthcare · v1.1.4 · 허가 품목별 CTD 필수 항목 및 신버전 반영 현황 관리</p>
+      <p class="text-slate-500 mt-2">Aju Healthcare · v1.2.0 · 허가 품목별 CTD 필수 항목 및 신버전 반영 현황 관리</p>
     </header>
 
-    <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-5 mb-8">
       <div class="bg-white rounded-2xl shadow p-6">
-        <p class="text-sm text-slate-500">전체품목(자사)</p>
+        <p class="text-sm text-slate-500">전체 품목(자사)</p>
         <p id="totalProducts" class="text-4xl font-bold mt-2">0</p>
       </div>
 
-      
       <div class="bg-white rounded-2xl shadow p-6">
         <p class="text-sm text-slate-500">CTD 전환 품목(자사)</p>
         <p id="convertedProducts" class="text-4xl font-bold mt-2 text-blue-600">0</p>
       </div>
 
       <div class="bg-white rounded-2xl shadow p-6">
-        <p class="text-sm text-slate-500">평균 필수 구비율</p>
+        <p class="text-sm text-slate-500">평균 필수 구비율(자사)</p>
         <p id="averageNewVersionRate" class="text-4xl font-bold mt-2 text-indigo-600">0%</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6 border-l-4 border-violet-400">
+        <p class="text-sm text-slate-500">위탁 품목 수</p>
+        <p id="contractTotalProducts" class="text-4xl font-bold mt-2 text-violet-600">0</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-6 border-l-4 border-amber-400">
+        <p class="text-sm text-slate-500">위탁 진행 건수</p>
+        <p id="contractInProgressProducts" class="text-4xl font-bold mt-2 text-amber-600">0</p>
+        <p class="text-xs text-slate-400 mt-2">허가 상태가 진행중인 품목</p>
       </div>
     </section>
 

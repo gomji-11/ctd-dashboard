@@ -154,21 +154,34 @@ function applyRoleToDashboard() {
 }
 
 function renderDashboard() {
- const dashboardProducts = products.filter(product => product.manufacturingType === "자사제조");
+  const dashboardProducts = products.filter(
+    product => product.manufacturingType === "자사제조"
+  );
+  const contractProducts = products.filter(
+    product => product.manufacturingType === "위탁제조"
+  );
 
-const totalProducts = dashboardProducts.length;
-const completeProducts = dashboardProducts.filter(isComplete).length;
-const incompleteProducts = totalProducts - completeProducts;
-const convertedProducts = dashboardProducts.filter(product => product.ctdConverted).length;
-const notConvertedProducts = totalProducts - convertedProducts;
+  const totalProducts = dashboardProducts.length;
+  const completeProducts = dashboardProducts.filter(isComplete).length;
+  const incompleteProducts = totalProducts - completeProducts;
+  const convertedProducts = dashboardProducts.filter(product => product.ctdConverted).length;
+  const notConvertedProducts = totalProducts - convertedProducts;
+  const contractTotalProducts = contractProducts.length;
+  const contractInProgressProducts = contractProducts.filter(
+    product => product.status === "진행중"
+  ).length;
 
   const totalEl = document.getElementById("totalProducts");
-const convertedEl = document.getElementById("convertedProducts");
-const averageEl = document.getElementById("averageNewVersionRate");
+  const convertedEl = document.getElementById("convertedProducts");
+  const averageEl = document.getElementById("averageNewVersionRate");
+  const contractTotalEl = document.getElementById("contractTotalProducts");
+  const contractInProgressEl = document.getElementById("contractInProgressProducts");
 
-if (totalEl) totalEl.textContent = totalProducts;
-if (convertedEl) convertedEl.textContent = convertedProducts;
-if (averageEl) averageEl.textContent = `${getAverageCompletionRate()}%`;
+  if (totalEl) totalEl.textContent = totalProducts;
+  if (convertedEl) convertedEl.textContent = convertedProducts;
+  if (averageEl) averageEl.textContent = `${getAverageCompletionRate()}%`;
+  if (contractTotalEl) contractTotalEl.textContent = contractTotalProducts;
+  if (contractInProgressEl) contractInProgressEl.textContent = contractInProgressProducts;
 
   if (completionChart) completionChart.destroy();
   if (conversionChart) conversionChart.destroy();
