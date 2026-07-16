@@ -153,35 +153,45 @@ function applyRoleToDashboard() {
   });
 }
 
+function isOwnManufacturingProduct(product) {
+  const type = String(product.manufacturingType || "").trim();
+  return type === "자사제조" || type === "자사 제조" || type === "자사";
+}
+
+function isContractManufacturingProduct(product) {
+  const type = String(product.manufacturingType || "").trim();
+  return ["위탁제조", "위탁 제조", "위탁품목", "위탁 품목", "위탁"].includes(type);
+}
+
+function isCtdConvertedProduct(product) {
+  return product.ctdConverted === true || String(product.ctdConverted).toLowerCase() === "true";
+}
+
 function renderDashboard() {
-  const dashboardProducts = products.filter(
-    product => product.manufacturingType === "자사제조"
-  );
-  const contractProducts = products.filter(
-    product => product.manufacturingType === "위탁제조"
-  );
+  const dashboardProducts = products.filter(isOwnManufacturingProduct);
+  const contractProducts = products.filter(isContractManufacturingProduct);
 
   const totalProducts = dashboardProducts.length;
   const completeProducts = dashboardProducts.filter(isComplete).length;
   const incompleteProducts = totalProducts - completeProducts;
-  const convertedProducts = dashboardProducts.filter(product => product.ctdConverted).length;
+  const convertedProducts = dashboardProducts.filter(isCtdConvertedProduct).length;
   const notConvertedProducts = totalProducts - convertedProducts;
   const contractTotalProducts = contractProducts.length;
-  const contractInProgressProducts = contractProducts.filter(
-    product => product.status === "진행중"
+  const contractConvertedProducts = contractProducts.filter(
+    isCtdConvertedProduct
   ).length;
 
   const totalEl = document.getElementById("totalProducts");
   const convertedEl = document.getElementById("convertedProducts");
   const averageEl = document.getElementById("averageNewVersionRate");
   const contractTotalEl = document.getElementById("contractTotalProducts");
-  const contractInProgressEl = document.getElementById("contractInProgressProducts");
+  const contractConvertedEl = document.getElementById("contractConvertedProducts");
 
   if (totalEl) totalEl.textContent = totalProducts;
   if (convertedEl) convertedEl.textContent = convertedProducts;
   if (averageEl) averageEl.textContent = `${getAverageCompletionRate()}%`;
   if (contractTotalEl) contractTotalEl.textContent = contractTotalProducts;
-  if (contractInProgressEl) contractInProgressEl.textContent = contractInProgressProducts;
+  if (contractConvertedEl) contractConvertedEl.textContent = contractConvertedProducts;
 
   if (completionChart) completionChart.destroy();
   if (conversionChart) conversionChart.destroy();
