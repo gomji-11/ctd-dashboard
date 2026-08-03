@@ -95,10 +95,13 @@
       <div class="p-6 border-b">
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div class="flex items-center gap-3"><h2 id="ctdSectionTitle" class="text-lg font-semibold">최신 CTD 세부 항목 구비현황</h2><span id="currentRevisionNumber" class="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">개정번호 1</span></div>
-          <button id="finishCtdEditBtn" class="hidden px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50">수정 종료 · 잠금</button>
+          <div class="flex items-center gap-2">
+            <button id="startCtdEditBtn" class="hidden px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">구비현황 수정</button>
+            <button id="finishCtdEditBtn" class="hidden px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50">수정 종료 · 잠금</button>
+          </div>
         </div>
         <p id="ctdSectionDescription" class="text-sm text-slate-500 mt-1">
-          위 개정이력과 자동 연동된 최신 현황입니다. 개정이력의 ‘구비현황 수정’을 눌러야 변경할 수 있습니다.
+          위 개정이력과 자동 연동된 최신 현황입니다. 아래 ‘구비현황 수정’을 눌러야 변경할 수 있습니다.
         </p>
         <div id="ctdEditStatus" class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">🔒 조회 상태 · 실수 방지를 위해 편집이 잠겨 있습니다.</div>
       </div>
@@ -117,12 +120,16 @@
         <input type="hidden" id="editingRevisionId" />
         <div><label class="block text-sm font-medium mb-1">개정번호</label><input id="revisionNumberInput" required placeholder="예: Rev. 1" class="w-full border rounded-lg px-3 py-2" /></div>
         <div><label class="block text-sm font-medium mb-1">개정일</label><input id="revisionDateInput" type="date" required class="w-full border rounded-lg px-3 py-2" /></div>
+        <div class="md:col-span-2"><label class="block text-sm font-medium mb-1">작성자</label><input id="revisionAuthorInput" required maxlength="50" autocomplete="off" placeholder="실제 작성자 이름을 입력하세요" class="w-full border rounded-lg px-3 py-2" /></div>
         <div class="md:col-span-2"><label class="block text-sm font-medium mb-1">개정사유</label><textarea id="revisionReasonInput" required rows="4" placeholder="개정 내용을 입력하세요" class="w-full border rounded-lg px-3 py-2 resize-y"></textarea></div>
-        <div class="md:col-span-2 flex justify-end gap-3 mt-2"><button type="button" id="cancelRevisionBtn" class="px-4 py-2 rounded-lg border">취소</button><button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">저장</button></div>
+        <div class="md:col-span-2 flex items-center justify-between gap-3 mt-2">
+          <button type="button" id="deleteRevisionBtn" class="hidden px-4 py-2 rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-50">이 개정이력 삭제</button>
+          <div class="ml-auto flex gap-3"><button type="button" id="cancelRevisionBtn" class="px-4 py-2 rounded-lg border">취소</button><button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">저장</button></div>
+        </div>
       </form>
     </div>
   </div>
 
-  <script type="module" src="js/detail.js?v=2.3.9"></script>
+  <script type="module" src="js/detail.js?v=2.3.11"></script>
 </body>
 </html>

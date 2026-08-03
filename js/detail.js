@@ -230,7 +230,7 @@ function renderRevisionHistory() {
       <td class="px-4 py-4 whitespace-pre-line">${escapeHtml(item.reason || "-")}</td>
       <td class="px-4 py-4 text-center"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">${Array.isArray(item.ctdSnapshot) ? item.ctdSnapshot.length : 0}개 항목 연동</span></td>
       <td class="px-4 py-4 text-center">${escapeHtml(item.author || "-")}</td>
-      <td class="px-4 py-4 text-center"><button class="revision-view-btn text-violet-700 hover:underline mr-2" data-id="${escapeHtml(item.id)}">구비현황 보기</button>${canEditData() ? `<button class="revision-copy-btn text-indigo-700 hover:underline mr-2" data-id="${escapeHtml(item.id)}">이 개정본으로 새 개정 만들기</button><button class="revision-edit-btn text-blue-600 hover:underline mr-2" data-id="${escapeHtml(item.id)}">이력 수정</button>${item.id === revisions[0]?.id ? `<button class="ctd-edit-btn text-emerald-700 hover:underline mr-2" data-id="${escapeHtml(item.id)}">구비현황 수정</button>` : ""}<button class="revision-delete-btn text-rose-600 hover:underline" data-id="${escapeHtml(item.id)}">삭제</button>` : ""}</td>
+      <td class="px-4 py-4 text-center whitespace-nowrap"><button class="revision-view-btn text-violet-700 hover:underline mr-3" data-id="${escapeHtml(item.id)}">구비현황 보기</button>${canEditData() ? `<button class="revision-copy-btn text-indigo-700 hover:underline mr-3" data-id="${escapeHtml(item.id)}">새 개정 생성</button><button class="revision-edit-btn text-blue-600 hover:underline" data-id="${escapeHtml(item.id)}">이력 수정</button>` : ""}</td>
     </tr>`).join("");
   }
   document.getElementById("openRevisionModalBtn").classList.toggle("hidden", !canEditData());
@@ -239,7 +239,7 @@ function renderRevisionHistory() {
   document.getElementById("currentRevisionNumber").textContent = selected ? `개정번호 ${selected.revisionNumber}` : "개정번호 1";
   document.getElementById("ctdSectionTitle").textContent = selected?.id === latest?.id ? "최신 CTD 세부 항목 구비현황" : "과거 CTD 세부 항목 구비현황";
   document.getElementById("ctdSectionDescription").textContent = selected?.id === latest?.id
-    ? "위 개정이력과 자동 연동된 최신 현황입니다. 개정이력의 ‘구비현황 수정’을 눌러야 변경할 수 있습니다."
+    ? "위 개정이력과 자동 연동된 최신 현황입니다. 아래 ‘구비현황 수정’을 눌러야 변경할 수 있습니다."
     : "선택한 개정 당시 저장된 구비현황입니다. 바로 이전 개정과 달라진 항목에는 ‘변경’ 표시가 나타납니다.";
   const editing = canEditCurrentRevision();
   const status = document.getElementById("ctdEditStatus");
@@ -251,6 +251,9 @@ function renderRevisionHistory() {
   status.className = editing
     ? "mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800"
     : "mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600";
+  const startEditButton = document.getElementById("startCtdEditBtn");
+  startEditButton.classList.toggle("hidden", !canEditData() || selected?.id !== latest?.id || editing);
+  startEditButton.dataset.id = latest?.id || "";
   document.getElementById("finishCtdEditBtn").classList.toggle("hidden", !editing);
   bindRevisionTableEvents();
 }
@@ -262,7 +265,11 @@ function openRevisionModal(revision = null) {
   document.getElementById("editingRevisionId").value = revision?.id || "";
   document.getElementById("revisionNumberInput").value = revision?.revisionNumber || String(nextRevisionNumber);
   document.getElementById("revisionDateInput").value = revision?.revisionDate || revision?.completedDate || revision?.plannedDate || new Date().toISOString().slice(0, 10);
+  document.getElementById("revisionAuthorInput").value = revision?.author === "시스템" ? "" : (revision?.author || "");
   document.getElementById("revisionReasonInput").value = revision?.reason || "";
+  const deleteButton = document.getElementById("deleteRevisionBtn");
+  deleteButton.classList.toggle("hidden", !revision || !canEditData());
+  deleteButton.dataset.id = revision?.id || "";
   document.getElementById("revisionModal").classList.remove("hidden");
 }
 
@@ -283,6 +290,12 @@ async function createRevisionFrom(revisionId) {
   const nextRevisionNumber = getNextRevisionNumber();
   if (!confirm(`개정번호 ${sourceRevision.revisionNumber}의 구비현황을 복사해 개정번호 ${nextRevisionNumber}을(를) 만드시겠습니까?\n\n기존 개정본은 변경되지 않으며, 새 개정에서 필요한 항목만 수정할 수 있습니다.`)) return;
 
+  const author = prompt("새 개정의 실제 작성자 이름을 입력하세요.", "")?.trim();
+  if (!author) {
+    alert("작성자를 입력해야 새 개정을 생성할 수 있습니다.");
+    return;
+  }
+
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
   const copiedItems = cloneRevisionSnapshot(sourceRevision);
@@ -291,7 +304,7 @@ async function createRevisionFrom(revisionId) {
     revisionNumber: String(nextRevisionNumber),
     revisionDate: today,
     reason: `개정번호 ${sourceRevision.revisionNumber} 기준 신규 개정`,
-    author: ({ admin: "관리자", editor: "데이터 수정자" }[getUserRole()] || "-"),
+    author,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
     sourceRevisionId: sourceRevision.id,
@@ -323,19 +336,32 @@ function bindRevisionTableEvents() {
     event.stopPropagation();
     openRevisionModal(product.revisionHistory.find(item => item.id === button.dataset.id));
   }));
-  document.querySelectorAll(".ctd-edit-btn").forEach(button => button.addEventListener("click", event => {
-    event.stopPropagation();
-    startCtdEdit(button.dataset.id);
-  }));
-  document.querySelectorAll(".revision-delete-btn").forEach(button => button.addEventListener("click", async event => {
-    event.stopPropagation();
-    if (!canEditData() || !confirm("이 개정이력을 삭제하시겠습니까?")) return;
-    if (activeRevisionId === button.dataset.id) activeRevisionId = null;
-    product.revisionHistory = product.revisionHistory.filter(item => item.id !== button.dataset.id);
-    await saveProduct(product);
-    renderRevisionHistory();
-    renderModules();
-  }));
+}
+
+async function deleteRevisionFromModal() {
+  if (!canEditData()) return;
+  const revisionId = document.getElementById("deleteRevisionBtn").dataset.id;
+  const target = product.revisionHistory.find(item => item.id === revisionId);
+  if (!target) return;
+  if (product.revisionHistory.length <= 1) {
+    alert("최소 한 개의 개정이력은 남아 있어야 합니다.");
+    return;
+  }
+  if (!confirm(`개정번호 ${target.revisionNumber} 이력과 저장된 구비현황을 삭제하시겠습니까?\n\n삭제 후에는 되돌릴 수 없습니다.`)) return;
+
+  const wasLatest = getLatestRevision()?.id === revisionId;
+  product.revisionHistory = product.revisionHistory.filter(item => item.id !== revisionId);
+  const latest = getLatestRevision();
+  if (wasLatest && Array.isArray(latest?.ctdSnapshot)) {
+    product.ctdItems = latest.ctdSnapshot.map(item => ({ ...item }));
+  }
+  activeRevisionId = null;
+  selectedRevisionId = latest?.id || null;
+  await saveProduct(product);
+  closeRevisionModal();
+  renderSummary();
+  renderRevisionHistory();
+  renderModules();
 }
 
 async function saveRevision(event) {
@@ -348,7 +374,7 @@ async function saveRevision(event) {
     revisionNumber: document.getElementById("revisionNumberInput").value.trim(),
     revisionDate: document.getElementById("revisionDateInput").value,
     reason: document.getElementById("revisionReasonInput").value.trim(),
-    author: existing?.author || ({ admin: "관리자", editor: "데이터 수정자" }[getUserRole()] || "-") ,
+    author: document.getElementById("revisionAuthorInput").value.trim(),
     createdAt: existing?.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -866,8 +892,10 @@ function bindEvents() {
 
 document.getElementById("printReportBtn").addEventListener("click", printPdfReport);
 document.getElementById("finishCtdEditBtn").addEventListener("click", finishCtdEdit);
+document.getElementById("startCtdEditBtn").addEventListener("click", event => startCtdEdit(event.currentTarget.dataset.id));
 document.getElementById("openRevisionModalBtn").addEventListener("click", () => openRevisionModal());
 document.getElementById("closeRevisionModalBtn").addEventListener("click", closeRevisionModal);
 document.getElementById("cancelRevisionBtn").addEventListener("click", closeRevisionModal);
+document.getElementById("deleteRevisionBtn").addEventListener("click", deleteRevisionFromModal);
 document.getElementById("revisionForm").addEventListener("submit", saveRevision);
 init();
