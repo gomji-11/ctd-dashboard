@@ -131,7 +131,7 @@ function render(products) {
   replaceChart("typeConversionChart", {
     type: "bar",
     data: { labels: ["자사 품목", "위탁 품목"], datasets: [
-      { label: "CTD 전환", data: [ownConverted, contractConverted], backgroundColor: "#2474e5", borderRadius: 6, maxBarThickness: 54 },
+      { label: "CTD 전환", data: [ownConverted, contractConverted], backgroundColor: ["#2474e5", "#8b5cf6"], borderRadius: 6, maxBarThickness: 54 },
       { label: "CTD 미전환", data: [ownProducts.length - ownConverted, contractProducts.length - contractConverted], backgroundColor: "#dce3ec", borderRadius: 6, maxBarThickness: 54 }
     ] },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 9 } } }, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: "#eef2f7" } } } }
