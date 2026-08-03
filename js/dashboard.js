@@ -24,7 +24,20 @@ const centerTextPlugin = {
     const centerY = (top + bottom) / 2;
     ctx.save();
     ctx.textAlign = "center";
-    if (stats) {
+    if (stats?.kind === "manufacturing") {
+      ctx.fillStyle = "#64748b";
+      ctx.font = "600 11px sans-serif";
+      ctx.fillText("전체 품목", centerX, centerY - 32);
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "700 20px sans-serif";
+      ctx.fillText(`${stats.total}개`, centerX, centerY - 7);
+      ctx.fillStyle = "#64748b";
+      ctx.font = "600 11px sans-serif";
+      ctx.fillText("자사 비율", centerX, centerY + 17);
+      ctx.fillStyle = "#2474e5";
+      ctx.font = "700 20px sans-serif";
+      ctx.fillText(`${stats.ownRate}%`, centerX, centerY + 42);
+    } else if (stats) {
       ctx.fillStyle = "#64748b";
       ctx.font = "600 11px sans-serif";
       ctx.fillText("자사 전체", centerX, centerY - 45);
@@ -119,10 +132,44 @@ function render(products) {
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: "#eef2f7" } } } }
   });
 
+  const unclassifiedCount = Math.max(0, products.length - ownProducts.length - contractProducts.length);
+  const ownTypeRate = products.length ? Math.round(ownProducts.length / products.length * 100) : 0;
+  const contractTypeRate = products.length ? Math.round(contractProducts.length / products.length * 100) : 0;
+  const unclassifiedRate = products.length ? Math.max(0, 100 - ownTypeRate - contractTypeRate) : 0;
+  const typeLabels = [
+    { text: `자사 ${ownProducts.length}개 (${ownTypeRate}%)`, color: "#2474e5", index: 0 },
+    { text: `위탁 ${contractProducts.length}개 (${contractTypeRate}%)`, color: "#8b5cf6", index: 1 }
+  ];
+  if (unclassifiedCount > 0) {
+    typeLabels.push({ text: `미분류 ${unclassifiedCount}개 (${unclassifiedRate}%)`, color: "#dce3ec", index: 2 });
+  }
   replaceChart("typeChart", {
     type: "doughnut",
-    data: { labels: ["자사", "위탁", "미분류"], datasets: [{ data: [ownProducts.length, contractProducts.length, Math.max(0, products.length - ownProducts.length - contractProducts.length)], backgroundColor: ["#2474e5", "#8b5cf6", "#dce3ec"], borderWidth: 0 }] },
-    options: { responsive: true, maintainAspectRatio: false, cutout: "66%", plugins: { legend: commonLegend } },
+    data: { labels: ["자사", "위탁", "미분류"], datasets: [{ data: [ownProducts.length, contractProducts.length, unclassifiedCount], backgroundColor: ["#2474e5", "#8b5cf6", "#dce3ec"], borderWidth: 0 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: "66%",
+      plugins: {
+        centerText: { stats: { kind: "manufacturing", total: products.length, ownRate: ownTypeRate } },
+        legend: {
+          ...commonLegend,
+          labels: {
+            ...commonLegend.labels,
+            generateLabels: () => typeLabels.map(item => ({
+              text: item.text,
+              fillStyle: item.color,
+              strokeStyle: item.color,
+              pointStyle: "circle",
+              hidden: false,
+              datasetIndex: 0,
+              index: item.index
+            }))
+          }
+        },
+        tooltip: { callbacks: { label: item => ` ${item.label}: ${item.raw}개` } }
+      }
+    },
     plugins: [centerTextPlugin]
   });
 
