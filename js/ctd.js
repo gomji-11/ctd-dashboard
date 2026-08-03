@@ -70,8 +70,7 @@ function applyRoleToDashboard() {
     });
     renderProductTable();
   });
-});
-
+const adminOnlyElements = [
 document.getElementById("openAddModalBtn"),
     document.getElementById("backupDataBtn"),
     document.getElementById("downloadCsvBtn"),
