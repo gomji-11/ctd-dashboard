@@ -11,7 +11,7 @@
   <div class="max-w-7xl mx-auto px-6 py-8">
     <header class="mb-8">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div><h1 class="text-3xl font-bold">CTD 관리</h1><p class="text-slate-500 mt-2">Aju Healthcare · v2.0.0 · 자사/위탁 품목별 CTD 현황 관리</p></div>
+        <div><h1 class="text-3xl font-bold">CTD 관리</h1><p class="text-slate-500 mt-2">Aju Healthcare · v2.0.1 · 자사/위탁 품목별 CTD 현황 관리</p></div>
         <nav class="flex gap-2"><a href="index.html" class="px-4 py-2 rounded-xl bg-white border text-slate-700 font-semibold hover:bg-slate-50">대시보드</a><a href="ctd.html" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold">CTD 관리</a></nav>
       </div>
     </header>
@@ -44,7 +44,9 @@
           <thead class="bg-slate-100 text-slate-700"><tr>
             <th class="px-5 py-4 text-left w-[250px]">품목명</th><th class="px-4 py-4 text-center w-[100px]">허가번호</th><th class="px-4 py-4 text-center w-[110px]">제조구분</th><th class="px-4 py-4 text-center w-[130px]">수탁제조사</th><th class="px-4 py-4 text-center w-[80px]">제형</th><th class="px-4 py-4 text-center w-[115px]">CTD 전환</th><th class="px-4 py-4 text-center w-[135px]">필수 구비율</th><th class="px-4 py-4 text-center w-[135px]">신버전 반영률</th><th class="px-4 py-4 text-center w-[90px]">허가상태</th><th class="px-4 py-4 text-center w-[75px]">관리</th>
           </tr></thead>
-          <tbody id="productTableBody" class="divide-y divide-slate-100"></tbody>
+          <tbody id="productTableBody" class="divide-y divide-slate-100">
+            <tr><td colspan="10" class="px-6 py-10 text-center text-slate-500">품목을 불러오는 중입니다...</td></tr>
+          </tbody>
         </table>
       </div>
     </section>

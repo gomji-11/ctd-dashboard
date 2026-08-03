@@ -1,7 +1,6 @@
 import {
   requireLogin,
   injectAuthBar,
-  getUserRole,
   canEditData
 } from "./auth.js";
 
@@ -54,24 +53,10 @@ function getFilteredProducts() {
 
 
 function applyRoleToDashboard() {
-  const role = getUserRole();
   const editMode = canEditData();
 
   const adminOnlyElements = [
-    document.querySelectorAll(".type-tab").forEach(button => {
-  button.addEventListener("click", () => {
-    activeManufacturingType = button.dataset.type;
-    document.querySelectorAll(".type-tab").forEach(tab => {
-      const active = tab === button;
-      tab.classList.toggle("bg-white", active);
-      tab.classList.toggle("shadow-sm", active);
-      tab.classList.toggle("text-blue-700", active);
-      tab.classList.toggle("text-slate-600", !active);
-    });
-    renderProductTable();
-  });
-const adminOnlyElements = [
-document.getElementById("openAddModalBtn"),
+    document.getElementById("openAddModalBtn"),
     document.getElementById("backupDataBtn"),
     document.getElementById("downloadCsvBtn"),
     document.getElementById("importDataInput")?.closest("label")
@@ -85,16 +70,6 @@ document.getElementById("openAddModalBtn"),
   document.querySelectorAll(".admin-action").forEach(element => {
     element.classList.toggle("hidden", !editMode);
   });
-}
-
-function isOwnManufacturingProduct(product) {
-  const type = String(product.manufacturingType || "").trim();
-  return type === "자사제조" || type === "자사 제조" || type === "자사";
-}
-
-function isContractManufacturingProduct(product) {
-  const type = String(product.manufacturingType || "").trim();
-  return ["위탁제조", "위탁 제조", "위탁품목", "위탁 품목", "위탁"].includes(type);
 }
 
 function isCtdConvertedProduct(product) {
@@ -134,6 +109,8 @@ function renderProductTable() {
     const completionRate = getCompletionRate(product);
     const newVersionCount = getNewVersionItems(product).length;
     const newVersionRate = getNewVersionRate(product);
+    const manufacturingType = normalizeManufacturingType(product);
+    const ctdConverted = isCtdConvertedProduct(product);
 
     const row = document.createElement("tr");
     row.className = "hover:bg-slate-50";
@@ -151,11 +128,11 @@ function renderProductTable() {
 
       <td class="px-4 py-6 text-center align-middle whitespace-nowrap">
         <span class="inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-          product.manufacturingType === "자사제조"
+          manufacturingType === "자사제조"
             ? "bg-emerald-100 text-emerald-700"
             : "bg-purple-100 text-purple-700"
         }">
-          ${product.manufacturingType || "-"}
+          ${manufacturingType || "-"}
         </span>
       </td>
 
@@ -169,11 +146,11 @@ function renderProductTable() {
 
       <td class="px-4 py-6 text-center align-middle whitespace-nowrap">
         <span class="inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-          product.ctdConverted
+          ctdConverted
             ? "bg-blue-100 text-blue-700"
             : "bg-amber-100 text-amber-700"
         }">
-          ${product.ctdConverted ? "CTD 전환" : "CTD 미전환"}
+          ${ctdConverted ? "CTD 전환" : "CTD 미전환"}
         </span>
       </td>
 
@@ -250,7 +227,7 @@ function openEditModal(productId) {
   document.getElementById("editingProductId").value = product.productId;
   document.getElementById("productNameInput").value = product.productName || "";
   document.getElementById("approvalNumberInput").value = product.approvalNumber || "";
-  document.getElementById("manufacturingTypeInput").value = product.manufacturingType || "자사제조";
+  document.getElementById("manufacturingTypeInput").value = normalizeManufacturingType(product) || "자사제조";
   document.getElementById("contractorManufacturerInput").value = product.contractorManufacturer || "";
   document.getElementById("dosageFormInput").value = product.dosageForm || "정제";
   document.getElementById("ctdConvertedInput").value = String(product.ctdConverted);
@@ -389,6 +366,22 @@ function downloadCsv() {
 
   URL.revokeObjectURL(url);
 }
+
+document.querySelectorAll(".type-tab").forEach(button => {
+  button.addEventListener("click", () => {
+    activeManufacturingType = button.dataset.type;
+
+    document.querySelectorAll(".type-tab").forEach(tab => {
+      const active = tab === button;
+      tab.classList.toggle("bg-white", active);
+      tab.classList.toggle("shadow-sm", active);
+      tab.classList.toggle("text-blue-700", active);
+      tab.classList.toggle("text-slate-600", !active);
+    });
+
+    renderProductTable();
+  });
+});
 
 document.getElementById("openAddModalBtn").addEventListener("click", openAddModal);
 document.getElementById("closeModalBtn").addEventListener("click", closeModal);

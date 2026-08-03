@@ -135,7 +135,7 @@ function renderLoginScreen() {
       <div class="bg-white w-full max-w-md rounded-2xl shadow p-8">
         <div class="text-center mb-6">
           <h1 class="text-2xl font-bold mb-2">CTD 구비현황 관리시스템</h1>
-          <p class="text-slate-500">Aju Healthcare · v2.0.0</p>
+          <p class="text-slate-500">Aju Healthcare · v2.0.1</p>
         </div>
 
         <label class="block text-sm font-medium mb-2">비밀번호</label>

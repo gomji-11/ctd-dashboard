@@ -146,7 +146,8 @@ function subscribeProducts(callback) {
 }
 
 function getRequiredItems(product) {
-  return product.ctdItems.filter(item => item.required);
+  const ctdItems = Array.isArray(product?.ctdItems) ? product.ctdItems : [];
+  return ctdItems.filter(item => item.required);
 }
 
 function getAvailableModuleCount(product) {
