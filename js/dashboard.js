@@ -1,29 +1,94 @@
 import { requireLogin, injectAuthBar } from "./auth.js";
-import { subscribeProducts, getCompletionRate, isComplete } from "./data.js";
+import { subscribeProducts, getCompletionRate } from "./data.js";
 
 if (!(await requireLogin())) throw new Error("Login required");
 injectAuthBar();
 
-let completionChart = null;
-let conversionChart = null;
+const charts = {};
+const own = product => ["자사제조", "자사 제조", "자사"].includes(String(product.manufacturingType || "").trim());
+const contract = product => ["위탁제조", "위탁 제조", "위탁품목", "위탁 품목", "위탁"].includes(String(product.manufacturingType || "").trim());
+const converted = product => product.ctdConverted === true || String(product.ctdConverted).toLowerCase() === "true";
 
-const labelPlugin = { id: "labelPlugin", afterDatasetsDraw(chart) { const {ctx}=chart; const data=chart.data.datasets[0].data; const total=data.reduce((a,b)=>a+b,0); chart.getDatasetMeta(0).data.forEach((arc,i)=>{ if(!data[i]) return; const p=arc.tooltipPosition(); ctx.save(); ctx.fillStyle="#0f172a"; ctx.font="bold 13px Arial"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(`${data[i]}개`,p.x,p.y-7); ctx.font="12px Arial"; ctx.fillText(`${total?Math.round(data[i]/total*100):0}%`,p.x,p.y+9); ctx.restore(); }); }};
-const own=p=>["자사제조","자사 제조","자사"].includes(String(p.manufacturingType||"").trim());
-const contract=p=>["위탁제조","위탁 제조","위탁품목","위탁 품목","위탁"].includes(String(p.manufacturingType||"").trim());
-const converted=p=>p.ctdConverted===true||String(p.ctdConverted).toLowerCase()==="true";
+Chart.defaults.color = "#64748b";
+Chart.defaults.font.family = "Pretendard, Apple SD Gothic Neo, Noto Sans KR, sans-serif";
 
-function render(products){
- const ownProducts=products.filter(own), contractProducts=products.filter(contract);
- const complete=ownProducts.filter(isComplete).length, incomplete=ownProducts.length-complete;
- const convertedCount=ownProducts.filter(converted).length, notConverted=ownProducts.length-convertedCount;
- const avg=ownProducts.length?Math.round(ownProducts.reduce((s,p)=>s+getCompletionRate(p),0)/ownProducts.length):0;
- document.getElementById("totalProducts").textContent=ownProducts.length;
- document.getElementById("convertedProducts").textContent=convertedCount;
- document.getElementById("averageCompletionRate").textContent=`${avg}%`;
- document.getElementById("contractTotalProducts").textContent=contractProducts.length;
- document.getElementById("contractConvertedProducts").textContent=contractProducts.filter(converted).length;
- if(completionChart) completionChart.destroy(); if(conversionChart) conversionChart.destroy();
- completionChart=new Chart(document.getElementById("completionChart"),{type:"doughnut",data:{labels:["구비 완료","미완료"],datasets:[{data:[complete,incomplete],backgroundColor:["#10b981","#e2e8f0"]}]},options:{cutout:"58%",plugins:{legend:{position:"bottom"}}},plugins:[labelPlugin]});
- conversionChart=new Chart(document.getElementById("conversionChart"),{type:"doughnut",data:{labels:["CTD 전환","CTD 미전환"],datasets:[{data:[convertedCount,notConverted],backgroundColor:["#2563eb","#f59e0b"]}]},options:{cutout:"58%",plugins:{legend:{position:"bottom"}}},plugins:[labelPlugin]});
+const centerTextPlugin = {
+  id: "centerText",
+  afterDraw(chart) {
+    if (chart.config.type !== "doughnut") return;
+    const values = chart.data.datasets[0].data;
+    const total = values.reduce((sum, value) => sum + value, 0);
+    const { ctx, chartArea: { left, right, top, bottom } } = chart;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#64748b";
+    ctx.font = "600 12px sans-serif";
+    ctx.fillText("전체", (left + right) / 2, (top + bottom) / 2 - 5);
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "700 22px sans-serif";
+    ctx.fillText(`${total}개`, (left + right) / 2, (top + bottom) / 2 + 23);
+    ctx.restore();
+  }
+};
+
+function replaceChart(id, config) {
+  charts[id]?.destroy();
+  charts[id] = new Chart(document.getElementById(id), config);
 }
+
+function render(products) {
+  const ownProducts = products.filter(own);
+  const contractProducts = products.filter(contract);
+  const convertedCount = products.filter(converted).length;
+  const averageRate = products.length
+    ? Math.round(products.reduce((sum, product) => sum + getCompletionRate(product), 0) / products.length)
+    : 0;
+
+  document.getElementById("allProducts").firstChild.nodeValue = products.length;
+  document.getElementById("totalProducts").firstChild.nodeValue = ownProducts.length;
+  document.getElementById("contractTotalProducts").firstChild.nodeValue = contractProducts.length;
+  document.getElementById("convertedProducts").firstChild.nodeValue = convertedCount;
+  document.getElementById("averageCompletionRate").textContent = `${averageRate}%`;
+  document.getElementById("conversionSummary").textContent = products.length
+    ? `전체의 ${Math.round(convertedCount / products.length * 100)}%`
+    : "전체 품목 기준";
+
+  const commonLegend = { position: "right", labels: { usePointStyle: true, boxWidth: 9, padding: 18 } };
+  replaceChart("conversionChart", {
+    type: "doughnut",
+    data: { labels: ["전환 완료", "전환 미완료"], datasets: [{ data: [convertedCount, products.length - convertedCount], backgroundColor: ["#2474e5", "#dce3ec"], borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: "66%", plugins: { legend: commonLegend, tooltip: { callbacks: { label: item => ` ${item.label}: ${item.raw}개` } } } },
+    plugins: [centerTextPlugin]
+  });
+
+  const ranges = [0, 0, 0, 0];
+  products.forEach(product => {
+    const rate = getCompletionRate(product);
+    ranges[rate <= 25 ? 0 : rate <= 50 ? 1 : rate <= 75 ? 2 : 3] += 1;
+  });
+  replaceChart("completionChart", {
+    type: "bar",
+    data: { labels: ["0~25%", "25~50%", "50~75%", "75~100%"], datasets: [{ label: "품목 수", data: ranges, backgroundColor: ["#bdd7fb", "#82b5f4", "#4c92eb", "#2474e5"], borderRadius: 7, maxBarThickness: 58 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: "#eef2f7" } } } }
+  });
+
+  replaceChart("typeChart", {
+    type: "doughnut",
+    data: { labels: ["자사", "위탁", "미분류"], datasets: [{ data: [ownProducts.length, contractProducts.length, Math.max(0, products.length - ownProducts.length - contractProducts.length)], backgroundColor: ["#2474e5", "#8b5cf6", "#dce3ec"], borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: "66%", plugins: { legend: commonLegend } },
+    plugins: [centerTextPlugin]
+  });
+
+  const ownConverted = ownProducts.filter(converted).length;
+  const contractConverted = contractProducts.filter(converted).length;
+  replaceChart("typeConversionChart", {
+    type: "bar",
+    data: { labels: ["자사 품목", "위탁 품목"], datasets: [
+      { label: "CTD 전환", data: [ownConverted, contractConverted], backgroundColor: "#2474e5", borderRadius: 6, maxBarThickness: 54 },
+      { label: "CTD 미전환", data: [ownProducts.length - ownConverted, contractProducts.length - contractConverted], backgroundColor: "#dce3ec", borderRadius: 6, maxBarThickness: 54 }
+    ] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 9 } } }, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: "#eef2f7" } } } }
+  });
+}
+
 subscribeProducts(render);
