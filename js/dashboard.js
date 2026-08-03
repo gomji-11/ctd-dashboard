@@ -39,7 +39,7 @@ function replaceChart(id, config) {
 function render(products) {
   const ownProducts = products.filter(own);
   const contractProducts = products.filter(contract);
-  const convertedCount = products.filter(converted).length;
+  const ownConvertedCount = ownProducts.filter(converted).length;
   const averageRate = products.length
     ? Math.round(products.reduce((sum, product) => sum + getCompletionRate(product), 0) / products.length)
     : 0;
@@ -47,16 +47,16 @@ function render(products) {
   document.getElementById("allProducts").firstChild.nodeValue = products.length;
   document.getElementById("totalProducts").firstChild.nodeValue = ownProducts.length;
   document.getElementById("contractTotalProducts").firstChild.nodeValue = contractProducts.length;
-  document.getElementById("convertedProducts").firstChild.nodeValue = convertedCount;
+  document.getElementById("convertedProducts").firstChild.nodeValue = ownConvertedCount;
   document.getElementById("averageCompletionRate").textContent = `${averageRate}%`;
-  document.getElementById("conversionSummary").textContent = products.length
-    ? `전체의 ${Math.round(convertedCount / products.length * 100)}%`
-    : "전체 품목 기준";
+  document.getElementById("conversionSummary").textContent = ownProducts.length
+    ? `자사 품목의 ${Math.round(ownConvertedCount / ownProducts.length * 100)}%`
+    : "자사 품목 기준";
 
   const commonLegend = { position: "right", labels: { usePointStyle: true, boxWidth: 9, padding: 18 } };
   replaceChart("conversionChart", {
     type: "doughnut",
-    data: { labels: ["전환 완료", "전환 미완료"], datasets: [{ data: [convertedCount, products.length - convertedCount], backgroundColor: ["#2474e5", "#dce3ec"], borderWidth: 0 }] },
+    data: { labels: ["전환 완료", "전환 미완료"], datasets: [{ data: [ownConvertedCount, ownProducts.length - ownConvertedCount], backgroundColor: ["#2474e5", "#dce3ec"], borderWidth: 0 }] },
     options: { responsive: true, maintainAspectRatio: false, cutout: "66%", plugins: { legend: commonLegend, tooltip: { callbacks: { label: item => ` ${item.label}: ${item.raw}개` } } } },
     plugins: [centerTextPlugin]
   });
