@@ -58,11 +58,24 @@
 .ctd-table-wrap tbody tr { transition: background .15s ease; }
 .ctd-table-wrap tbody tr:hover { background: #f7faff !important; }
 .ctd-table-wrap tbody a { color: #176bd5; font-size: 12px; font-weight: 700; }
-.ctd-body #authBar { position: fixed; right: 34px; top: 22px; margin: 0; z-index: 40; }
+.ctd-body > #authBar {
+  position: fixed !important;
+  right: 34px !important;
+  top: 22px !important;
+  bottom: auto !important;
+  left: auto !important;
+  margin: 0 !important;
+  z-index: 1000;
+  padding: 6px;
+  border: 1px solid rgba(220, 228, 237, .9);
+  border-radius: 10px;
+  background: rgba(244, 247, 251, .96);
+  box-shadow: 0 6px 20px rgba(15, 39, 58, .10);
+}
 .ctd-body #productModal { font-family: Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
 @media (max-width: 760px) {
   .ctd-main { padding: 22px 16px; }
   .ctd-page-header { gap: 12px; }
   .ctd-toolbar, .ctd-filters { padding-left: 16px !important; padding-right: 16px !important; }
-  .ctd-body #authBar { position: static; margin: 14px 18px; }
+  .ctd-body > #authBar { right: 12px !important; top: 12px !important; max-width: calc(100vw - 24px); }
 }

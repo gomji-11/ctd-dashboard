@@ -225,7 +225,7 @@ function getRoleLabel() {
 function injectAuthBar() {
   if (document.getElementById("authBar")) return;
 
-  const root = document.querySelector("body > div");
+  const root = document.body;
   if (!root) return;
 
   const role = getUserRole();
@@ -260,7 +260,9 @@ function injectAuthBar() {
     </button>
   `;
 
-  root.prepend(authBar);
+  // Keep the account controls outside each page's scrolling/layout container.
+  // This makes position: fixed relative to the viewport on every page.
+  root.appendChild(authBar);
 
   document.getElementById("logoutBtn")?.addEventListener("click", logout);
   document.getElementById("openPasswordModalBtn")?.addEventListener("click", openPasswordModal);

@@ -2,7 +2,7 @@ import {
   requireLogin,
   injectAuthBar,
   canEditData
-} from "./auth.js";
+} from "./auth.js?v=2.3.6";
 
 import {
   createCtdItems,
