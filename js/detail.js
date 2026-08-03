@@ -577,11 +577,24 @@ function renderModules() {
   bindEvents();
   applyRoleToDetail();
 }
-function generateReportHtml() {
-  const requiredCount = getRequiredItems(product).length;
-  const availableCount = getAvailableModuleCount(product);
-  const newVersionCount = getNewVersionItems(product).length;
-  const groups = getItemsByModule();
+function generateReportHtml(reportType) {
+  const includeRevisions = reportType !== "latest-required";
+  const includeLatest = reportType !== "revisions";
+  const includeAllItems = reportType === "revisions-latest-all";
+  const latestRevision = getLatestRevision();
+  const latestItems = cloneRevisionSnapshot(latestRevision);
+  const reportItems = includeAllItems ? latestItems : latestItems.filter(item => item.required);
+  const requiredItems = latestItems.filter(item => item.required);
+  const requiredCount = requiredItems.length;
+  const availableCount = requiredItems.filter(item => item.available).length;
+  const newVersionCount = requiredItems.filter(item => item.ctdVersionStatus === "신버전").length;
+  const completionRate = requiredCount ? Math.round((availableCount / requiredCount) * 100) : 0;
+  const newVersionRate = requiredCount ? Math.round((newVersionCount / requiredCount) * 100) : 0;
+  const groups = reportItems.reduce((result, item) => {
+    if (!result[item.module]) result[item.module] = [];
+    result[item.module].push(item);
+    return result;
+  }, {});
   const today = new Date().toISOString().slice(0, 10);
   const revisionRows = getRevisionHistory().map(item => `
     <tr>
@@ -595,8 +608,8 @@ function generateReportHtml() {
   const moduleSections = Object.entries(groups).map(([moduleName, items]) => {
     const rows = items.map(item => `
       <tr>
-        <td>${item.code}</td>
-        <td>${item.title}</td>
+        <td>${escapeHtml(item.code)}</td>
+        <td>${escapeHtml(item.title)}</td>
         <td>${item.required ? "필수" : "선택"}</td>
         <td>${item.ctdVersionStatus || "구버전"}</td>
         <td>${item.versionNumber || "-"}</td>
@@ -606,7 +619,7 @@ function generateReportHtml() {
     `).join("");
 
     return `
-      <h2>${moduleName}</h2>
+      <h2>${escapeHtml(moduleName)}</h2>
       <table>
         <thead>
           <tr>
@@ -714,45 +727,45 @@ function generateReportHtml() {
     </head>
     <body>
       <h1>CTD 구비현황 보고서</h1>
-      <div class="meta">보고서 출력일: ${today}</div>
+      <div class="meta">보고서 출력일: ${today} · 출력 유형: ${escapeHtml(document.querySelector(`input[name="reportType"]:checked`)?.nextElementSibling?.querySelector("strong")?.textContent || "")}</div>
 
       <h2>품목 정보</h2>
       <table>
         <tbody>
           <tr>
             <th>품목명</th>
-            <td>${product.productName}</td>
+            <td>${escapeHtml(product.productName)}</td>
             <th>허가번호</th>
-            <td>${product.approvalNumber || "-"}</td>
+            <td>${escapeHtml(product.approvalNumber || "-")}</td>
           </tr>
           <tr>
             <th>제조구분</th>
-            <td>${product.manufacturingType || "-"}</td>
+            <td>${escapeHtml(product.manufacturingType || "-")}</td>
             <th>수탁제조사</th>
-            <td>${product.contractorManufacturer || "-"}</td>
+            <td>${escapeHtml(product.contractorManufacturer || "-")}</td>
           </tr>
           <tr>
             <th>제형</th>
-            <td>${product.dosageForm || "-"}</td>
+            <td>${escapeHtml(product.dosageForm || "-")}</td>
             <th>CTD 전환</th>
             <td>${product.ctdConverted ? "CTD 전환" : "CTD 미전환"}</td>
           </tr>
           <tr>
             <th>허가 상태</th>
-            <td colspan="3">${product.status || "-"}</td>
+            <td colspan="3">${escapeHtml(product.status || "-")}</td>
           </tr>
         </tbody>
       </table>
 
-      <div class="summary">
+      ${includeLatest ? `<div class="summary">
         <div class="card">
           <div class="card-title">필수 항목 구비율</div>
-          <div class="card-value">${getCompletionRate(product)}%</div>
+          <div class="card-value">${completionRate}%</div>
           <div>${availableCount}/${requiredCount}</div>
         </div>
         <div class="card">
           <div class="card-title">신버전 반영률</div>
-          <div class="card-value">${getNewVersionRate(product)}%</div>
+          <div class="card-value">${newVersionRate}%</div>
           <div>${newVersionCount}/${requiredCount}</div>
         </div>
         <div class="card">
@@ -760,33 +773,55 @@ function generateReportHtml() {
           <div class="card-value">${requiredCount}</div>
         </div>
         <div class="card">
-          <div class="card-title">전체 CTD 항목 수</div>
-          <div class="card-value">${product.ctdItems.length}</div>
+          <div class="card-title">출력 CTD 항목 수</div>
+          <div class="card-value">${reportItems.length}</div>
         </div>
-      </div>
+      </div>` : ""}
 
-      <h2>CTD 개정이력</h2>
+      ${includeRevisions ? `<h2>CTD 개정이력</h2>
       <table>
         <thead><tr><th>개정번호</th><th>개정일</th><th>개정사유</th><th>작성자</th></tr></thead>
         <tbody>${revisionRows || `<tr><td colspan="4">등록된 개정이력이 없습니다.</td></tr>`}</tbody>
-      </table>
+      </table>` : ""}
 
-      ${moduleSections}
+      ${includeLatest ? `<h2>최신 CTD 구비현황 · 개정번호 ${escapeHtml(latestRevision?.revisionNumber || "-")}</h2>${moduleSections || "<p>출력할 CTD 항목이 없습니다.</p>"}` : ""}
     </body>
     </html>
   `;
 }
 
-function printPdfReport() {
+function printPdfReport(reportType) {
   const reportWindow = window.open("", "_blank");
+  if (!reportWindow) {
+    alert("팝업이 차단되었습니다. 이 사이트의 팝업을 허용한 뒤 다시 시도해주세요.");
+    return;
+  }
   reportWindow.document.open();
-  reportWindow.document.write(generateReportHtml());
+  reportWindow.document.write(generateReportHtml(reportType));
   reportWindow.document.close();
 
   reportWindow.onload = function () {
     reportWindow.focus();
     reportWindow.print();
   };
+}
+
+function openReportModal() {
+  document.getElementById("reportForm").reset();
+  document.querySelector('input[name="reportType"][value="revisions-latest-required"]').checked = true;
+  document.getElementById("reportModal").classList.remove("hidden");
+}
+
+function closeReportModal() {
+  document.getElementById("reportModal").classList.add("hidden");
+}
+
+function submitReport(event) {
+  event.preventDefault();
+  const reportType = new FormData(event.currentTarget).get("reportType");
+  if (!reportType) return;
+  printPdfReport(reportType);
+  closeReportModal();
 }
 
 
@@ -890,7 +925,10 @@ function bindEvents() {
   });
 }
 
-document.getElementById("printReportBtn").addEventListener("click", printPdfReport);
+document.getElementById("printReportBtn").addEventListener("click", openReportModal);
+document.getElementById("closeReportModalBtn").addEventListener("click", closeReportModal);
+document.getElementById("cancelReportBtn").addEventListener("click", closeReportModal);
+document.getElementById("reportForm").addEventListener("submit", submitReport);
 document.getElementById("finishCtdEditBtn").addEventListener("click", finishCtdEdit);
 document.getElementById("startCtdEditBtn").addEventListener("click", event => startCtdEdit(event.currentTarget.dataset.id));
 document.getElementById("openRevisionModalBtn").addEventListener("click", () => openRevisionModal());
