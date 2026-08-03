@@ -43,10 +43,48 @@ async function init() {
   }
 
   normalizeProductData();
+  await ensureInitialRevision();
 
   renderSummary();
   renderRevisionHistory();
   renderModules();
+}
+
+function cloneCtdItems() {
+  return product.ctdItems.map(item => ({ ...item }));
+}
+
+function getLatestRevision() {
+  return getRevisionHistory()[0] || null;
+}
+
+function createInitialRevision() {
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    id: `REV-INITIAL-${product.productId}`,
+    revisionNumber: "1",
+    status: "완료",
+    plannedDate: "",
+    completedDate: today,
+    reason: "최초 등록 구비현황",
+    author: "시스템",
+    createdAt: `${today}T00:00:00.000Z`,
+    updatedAt: new Date().toISOString(),
+    ctdSnapshot: cloneCtdItems()
+  };
+}
+
+async function ensureInitialRevision() {
+  if (product.revisionHistory.length) return;
+  product.revisionHistory.push(createInitialRevision());
+  if (canEditData()) await saveProduct(product);
+}
+
+function syncLatestRevisionSnapshot() {
+  const latest = getLatestRevision();
+  if (!latest) return;
+  latest.ctdSnapshot = cloneCtdItems();
+  latest.updatedAt = new Date().toISOString();
 }
 
 function normalizeProductData() {
@@ -89,6 +127,7 @@ function renderSummary() {
 
 async function saveCurrentProduct() {
   if (!canEditData()) return;
+  syncLatestRevisionSnapshot();
   await saveProduct(product);
 }
 
@@ -135,7 +174,7 @@ function renderRevisionHistory() {
 
   const body = document.getElementById("revisionTableBody");
   if (!revisions.length) {
-    body.innerHTML = `<tr><td colspan="7" class="px-6 py-10 text-center text-slate-500">등록된 개정이력이 없습니다.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="8" class="px-6 py-10 text-center text-slate-500">등록된 개정이력이 없습니다.</td></tr>`;
   } else {
     const badge = { "예정": "bg-slate-100 text-slate-700", "진행 중": "bg-amber-100 text-amber-700", "완료": "bg-emerald-100 text-emerald-700" };
     body.innerHTML = revisions.map(item => `<tr class="hover:bg-slate-50">
@@ -144,19 +183,23 @@ function renderRevisionHistory() {
       <td class="px-4 py-4 text-center">${escapeHtml(item.plannedDate || "-")}</td>
       <td class="px-4 py-4 text-center">${escapeHtml(item.completedDate || "-")}</td>
       <td class="px-4 py-4 whitespace-pre-line">${escapeHtml(item.reason || "-")}</td>
+      <td class="px-4 py-4 text-center"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">${Array.isArray(item.ctdSnapshot) ? item.ctdSnapshot.length : 0}개 항목 연동</span></td>
       <td class="px-4 py-4 text-center">${escapeHtml(item.author || "-")}</td>
       <td class="px-4 py-4 text-center">${canEditData() ? `<button class="revision-edit-btn text-blue-600 hover:underline mr-2" data-id="${escapeHtml(item.id)}">수정</button><button class="revision-delete-btn text-rose-600 hover:underline" data-id="${escapeHtml(item.id)}">삭제</button>` : `<span class="text-slate-400">조회</span>`}</td>
     </tr>`).join("");
   }
   document.getElementById("openRevisionModalBtn").classList.toggle("hidden", !canEditData());
+  const latest = revisions[0];
+  document.getElementById("currentRevisionNumber").textContent = latest ? `개정번호 ${latest.revisionNumber}` : "개정번호 1";
   bindRevisionTableEvents();
 }
 
 function openRevisionModal(revision = null) {
   if (!canEditData()) return;
+  const nextRevisionNumber = Math.max(0, ...product.revisionHistory.map(item => Number.parseInt(String(item.revisionNumber).replace(/\D/g, ""), 10) || 0)) + 1;
   document.getElementById("revisionModalTitle").textContent = revision ? "개정이력 수정" : "개정이력 등록";
   document.getElementById("editingRevisionId").value = revision?.id || "";
-  document.getElementById("revisionNumberInput").value = revision?.revisionNumber || "";
+  document.getElementById("revisionNumberInput").value = revision?.revisionNumber || String(nextRevisionNumber);
   document.getElementById("revisionStatusInput").value = revision?.status || "예정";
   document.getElementById("revisionPlannedDateInput").value = revision?.plannedDate || "";
   document.getElementById("revisionCompletedDateInput").value = revision?.completedDate || "";
@@ -204,6 +247,7 @@ async function saveRevision(event) {
     createdAt: existing?.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
+  entry.ctdSnapshot = existing?.ctdSnapshot || cloneCtdItems();
   if (existing) Object.assign(existing, entry); else product.revisionHistory.push(entry);
   await saveCurrentProduct();
   closeRevisionModal();
