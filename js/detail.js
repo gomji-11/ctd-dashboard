@@ -25,6 +25,7 @@ const productId = new URLSearchParams(window.location.search).get("id");
 
 let product = null;
 let activeRevisionId = null;
+let selectedRevisionId = null;
 
 let openedModules = {
   "Module 1": false,
@@ -45,6 +46,7 @@ async function init() {
 
   normalizeProductData();
   await ensureInitialRevision();
+  selectedRevisionId = getLatestRevision()?.id || null;
 
   renderSummary();
   renderRevisionHistory();
@@ -61,7 +63,19 @@ function getLatestRevision() {
 
 function canEditCurrentRevision() {
   const latest = getLatestRevision();
-  return canEditData() && Boolean(latest) && activeRevisionId === latest.id;
+  return canEditData() && Boolean(latest) && activeRevisionId === latest.id && selectedRevisionId === latest.id;
+}
+
+function getSelectedRevision() {
+  return getRevisionHistory().find(item => item.id === selectedRevisionId) || getLatestRevision();
+}
+
+function selectRevision(revisionId) {
+  activeRevisionId = null;
+  selectedRevisionId = revisionId;
+  renderRevisionHistory();
+  renderModules();
+  document.getElementById("moduleContainer").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function startCtdEdit(revisionId) {
@@ -71,6 +85,7 @@ function startCtdEdit(revisionId) {
     alert("과거 개정은 변경할 수 없습니다. 최신 개정의 구비현황만 수정해주세요.");
     return;
   }
+  selectedRevisionId = revisionId;
   activeRevisionId = revisionId;
   renderRevisionHistory();
   renderModules();
@@ -155,7 +170,11 @@ async function saveCurrentProduct() {
 }
 
 function getItemsByModule() {
-  return product.ctdItems.reduce((groups, item, index) => {
+  const selected = getSelectedRevision();
+  const sourceItems = selected && selected.id !== getLatestRevision()?.id && Array.isArray(selected.ctdSnapshot)
+    ? selected.ctdSnapshot
+    : product.ctdItems;
+  return sourceItems.reduce((groups, item, index) => {
     if (!groups[item.module]) groups[item.module] = [];
 
     groups[item.module].push({
@@ -196,23 +215,30 @@ function renderRevisionHistory() {
   if (!revisions.length) {
     body.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-slate-500">등록된 개정이력이 없습니다.</td></tr>`;
   } else {
-    body.innerHTML = revisions.map(item => `<tr class="hover:bg-slate-50">
+    body.innerHTML = revisions.map(item => `<tr class="revision-view-row cursor-pointer ${item.id === selectedRevisionId ? "bg-blue-50 ring-1 ring-inset ring-blue-200" : "hover:bg-slate-50"}" data-id="${escapeHtml(item.id)}">
       <td class="px-4 py-4 font-semibold">${escapeHtml(item.revisionNumber)}</td>
       <td class="px-4 py-4 text-center">${escapeHtml(item.revisionDate || item.completedDate || item.plannedDate || "-")}</td>
       <td class="px-4 py-4 whitespace-pre-line">${escapeHtml(item.reason || "-")}</td>
       <td class="px-4 py-4 text-center"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">${Array.isArray(item.ctdSnapshot) ? item.ctdSnapshot.length : 0}개 항목 연동</span></td>
       <td class="px-4 py-4 text-center">${escapeHtml(item.author || "-")}</td>
-      <td class="px-4 py-4 text-center">${canEditData() ? `<button class="revision-edit-btn text-blue-600 hover:underline mr-2" data-id="${escapeHtml(item.id)}">이력 수정</button>${item.id === revisions[0]?.id ? `<button class="ctd-edit-btn text-emerald-700 hover:underline mr-2" data-id="${escapeHtml(item.id)}">구비현황 수정</button>` : ""}<button class="revision-delete-btn text-rose-600 hover:underline" data-id="${escapeHtml(item.id)}">삭제</button>` : `<span class="text-slate-400">조회</span>`}</td>
+      <td class="px-4 py-4 text-center"><button class="revision-view-btn text-violet-700 hover:underline mr-2" data-id="${escapeHtml(item.id)}">구비현황 보기</button>${canEditData() ? `<button class="revision-edit-btn text-blue-600 hover:underline mr-2" data-id="${escapeHtml(item.id)}">이력 수정</button>${item.id === revisions[0]?.id ? `<button class="ctd-edit-btn text-emerald-700 hover:underline mr-2" data-id="${escapeHtml(item.id)}">구비현황 수정</button>` : ""}<button class="revision-delete-btn text-rose-600 hover:underline" data-id="${escapeHtml(item.id)}">삭제</button>` : ""}</td>
     </tr>`).join("");
   }
   document.getElementById("openRevisionModalBtn").classList.toggle("hidden", !canEditData());
   const latest = revisions[0];
-  document.getElementById("currentRevisionNumber").textContent = latest ? `개정번호 ${latest.revisionNumber}` : "개정번호 1";
+  const selected = getSelectedRevision();
+  document.getElementById("currentRevisionNumber").textContent = selected ? `개정번호 ${selected.revisionNumber}` : "개정번호 1";
+  document.getElementById("ctdSectionTitle").textContent = selected?.id === latest?.id ? "최신 CTD 세부 항목 구비현황" : "과거 CTD 세부 항목 구비현황";
+  document.getElementById("ctdSectionDescription").textContent = selected?.id === latest?.id
+    ? "위 개정이력과 자동 연동된 최신 현황입니다. 개정이력의 ‘구비현황 수정’을 눌러야 변경할 수 있습니다."
+    : "선택한 개정 당시 저장된 구비현황입니다. 바로 이전 개정과 달라진 항목에는 ‘변경’ 표시가 나타납니다.";
   const editing = canEditCurrentRevision();
   const status = document.getElementById("ctdEditStatus");
   status.textContent = editing
     ? `✏️ 개정번호 ${latest.revisionNumber} 수정 중 · 변경 내용은 이 개정이력에 자동 저장됩니다.`
-    : "🔒 조회 상태 · 실수 방지를 위해 편집이 잠겨 있습니다.";
+    : selected?.id !== latest?.id
+      ? `🕘 개정번호 ${selected?.revisionNumber || "-"} 당시의 저장본 · 과거 개정은 조회만 가능합니다.`
+      : "🔒 조회 상태 · 실수 방지를 위해 편집이 잠겨 있습니다.";
   status.className = editing
     ? "mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800"
     : "mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600";
@@ -238,13 +264,21 @@ function closeRevisionModal() {
 }
 
 function bindRevisionTableEvents() {
-  document.querySelectorAll(".revision-edit-btn").forEach(button => button.addEventListener("click", () => {
+  document.querySelectorAll(".revision-view-btn").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    selectRevision(button.dataset.id);
+  }));
+  document.querySelectorAll(".revision-view-row").forEach(row => row.addEventListener("click", () => selectRevision(row.dataset.id)));
+  document.querySelectorAll(".revision-edit-btn").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
     openRevisionModal(product.revisionHistory.find(item => item.id === button.dataset.id));
   }));
-  document.querySelectorAll(".ctd-edit-btn").forEach(button => button.addEventListener("click", () => {
+  document.querySelectorAll(".ctd-edit-btn").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
     startCtdEdit(button.dataset.id);
   }));
-  document.querySelectorAll(".revision-delete-btn").forEach(button => button.addEventListener("click", async () => {
+  document.querySelectorAll(".revision-delete-btn").forEach(button => button.addEventListener("click", async event => {
+    event.stopPropagation();
     if (!canEditData() || !confirm("이 개정이력을 삭제하시겠습니까?")) return;
     if (activeRevisionId === button.dataset.id) activeRevisionId = null;
     product.revisionHistory = product.revisionHistory.filter(item => item.id !== button.dataset.id);
@@ -272,6 +306,7 @@ async function saveRevision(event) {
   if (existing) Object.assign(existing, entry); else product.revisionHistory.push(entry);
   syncLatestRevisionSnapshot();
   await saveProduct(product);
+  selectedRevisionId = entry.id;
   closeRevisionModal();
   renderRevisionHistory();
 }
@@ -293,6 +328,20 @@ function renderModules() {
   container.innerHTML = "";
 
   const groups = getItemsByModule();
+  const revisionsAsc = [...getRevisionHistory()].reverse();
+  const selected = getSelectedRevision();
+  const selectedIndex = revisionsAsc.findIndex(item => item.id === selected?.id);
+  const previousSnapshot = selectedIndex > 0 && Array.isArray(revisionsAsc[selectedIndex - 1].ctdSnapshot)
+    ? revisionsAsc[selectedIndex - 1].ctdSnapshot
+    : [];
+  const previousByCode = new Map(previousSnapshot.map(item => [item.code, item]));
+  const isChanged = item => {
+    if (!previousSnapshot.length) return false;
+    const previous = previousByCode.get(item.code);
+    if (!previous) return true;
+    return ["required", "ctdVersionStatus", "versionNumber", "revisionDate", "available"]
+      .some(key => String(previous[key] ?? "") !== String(item[key] ?? ""));
+  };
 
   Object.entries(groups).forEach(([moduleName, items]) => {
     const requiredItems = items.filter(item => item.required);
@@ -380,6 +429,7 @@ function renderModules() {
                 <td class="px-4 py-4">
                   <div class="flex items-center gap-2">
                     <span class="break-keep leading-relaxed">${item.title}</span>
+                    ${isChanged(item) ? `<span class="shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-100 text-violet-700">변경</span>` : ""}
                     ${
                       item.required
                         ? `<span class="shrink-0 px-2 py-0.5 rounded-full text-xs bg-rose-100 text-rose-700">필수</span>`
