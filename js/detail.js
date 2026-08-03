@@ -1,7 +1,8 @@
 import {
   requireLogin,
   injectAuthBar,
-  canEditData
+  canEditData,
+  getUserRole
 } from "./auth.js";
 
 import {
@@ -44,6 +45,7 @@ async function init() {
   normalizeProductData();
 
   renderSummary();
+  renderRevisionHistory();
   renderModules();
 }
 
@@ -51,6 +53,8 @@ function normalizeProductData() {
   if (!product.ctdItems) {
     product.ctdItems = [];
   }
+
+  if (!Array.isArray(product.revisionHistory)) product.revisionHistory = [];
 
   product.ctdItems = product.ctdItems.map(item => ({
     ...item,
@@ -112,6 +116,98 @@ async function setModuleRequired(moduleName, checked) {
   await saveCurrentProduct();
   renderSummary();
   renderModules();
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+}
+
+function getRevisionHistory() {
+  return [...product.revisionHistory].sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+}
+
+function renderRevisionHistory() {
+  const revisions = getRevisionHistory();
+  const completeCount = revisions.filter(item => item.status === "완료").length;
+  document.getElementById("revisionTotalCount").textContent = revisions.length;
+  document.getElementById("revisionOpenCount").textContent = revisions.length - completeCount;
+  document.getElementById("revisionCompleteCount").textContent = completeCount;
+
+  const body = document.getElementById("revisionTableBody");
+  if (!revisions.length) {
+    body.innerHTML = `<tr><td colspan="7" class="px-6 py-10 text-center text-slate-500">등록된 개정이력이 없습니다.</td></tr>`;
+  } else {
+    const badge = { "예정": "bg-slate-100 text-slate-700", "진행 중": "bg-amber-100 text-amber-700", "완료": "bg-emerald-100 text-emerald-700" };
+    body.innerHTML = revisions.map(item => `<tr class="hover:bg-slate-50">
+      <td class="px-4 py-4 font-semibold">${escapeHtml(item.revisionNumber)}</td>
+      <td class="px-4 py-4 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${badge[item.status] || badge["예정"]}">${escapeHtml(item.status || "예정")}</span></td>
+      <td class="px-4 py-4 text-center">${escapeHtml(item.plannedDate || "-")}</td>
+      <td class="px-4 py-4 text-center">${escapeHtml(item.completedDate || "-")}</td>
+      <td class="px-4 py-4 whitespace-pre-line">${escapeHtml(item.reason || "-")}</td>
+      <td class="px-4 py-4 text-center">${escapeHtml(item.author || "-")}</td>
+      <td class="px-4 py-4 text-center">${canEditData() ? `<button class="revision-edit-btn text-blue-600 hover:underline mr-2" data-id="${escapeHtml(item.id)}">수정</button><button class="revision-delete-btn text-rose-600 hover:underline" data-id="${escapeHtml(item.id)}">삭제</button>` : `<span class="text-slate-400">조회</span>`}</td>
+    </tr>`).join("");
+  }
+  document.getElementById("openRevisionModalBtn").classList.toggle("hidden", !canEditData());
+  bindRevisionTableEvents();
+}
+
+function openRevisionModal(revision = null) {
+  if (!canEditData()) return;
+  document.getElementById("revisionModalTitle").textContent = revision ? "개정이력 수정" : "개정이력 등록";
+  document.getElementById("editingRevisionId").value = revision?.id || "";
+  document.getElementById("revisionNumberInput").value = revision?.revisionNumber || "";
+  document.getElementById("revisionStatusInput").value = revision?.status || "예정";
+  document.getElementById("revisionPlannedDateInput").value = revision?.plannedDate || "";
+  document.getElementById("revisionCompletedDateInput").value = revision?.completedDate || "";
+  document.getElementById("revisionReasonInput").value = revision?.reason || "";
+  document.getElementById("revisionModal").classList.remove("hidden");
+}
+
+function closeRevisionModal() {
+  document.getElementById("revisionModal").classList.add("hidden");
+  document.getElementById("revisionForm").reset();
+  document.getElementById("editingRevisionId").value = "";
+}
+
+function bindRevisionTableEvents() {
+  document.querySelectorAll(".revision-edit-btn").forEach(button => button.addEventListener("click", () => {
+    openRevisionModal(product.revisionHistory.find(item => item.id === button.dataset.id));
+  }));
+  document.querySelectorAll(".revision-delete-btn").forEach(button => button.addEventListener("click", async () => {
+    if (!canEditData() || !confirm("이 개정이력을 삭제하시겠습니까?")) return;
+    product.revisionHistory = product.revisionHistory.filter(item => item.id !== button.dataset.id);
+    await saveCurrentProduct();
+    renderRevisionHistory();
+  }));
+}
+
+async function saveRevision(event) {
+  event.preventDefault();
+  if (!canEditData()) return;
+  const editingId = document.getElementById("editingRevisionId").value;
+  const status = document.getElementById("revisionStatusInput").value;
+  const completedDate = document.getElementById("revisionCompletedDateInput").value;
+  if (status === "완료" && !completedDate) {
+    alert("완료 상태에는 완료일을 입력해주세요.");
+    return;
+  }
+  const existing = product.revisionHistory.find(item => item.id === editingId);
+  const entry = {
+    id: editingId || `REV-${Date.now()}`,
+    revisionNumber: document.getElementById("revisionNumberInput").value.trim(),
+    status,
+    plannedDate: document.getElementById("revisionPlannedDateInput").value,
+    completedDate,
+    reason: document.getElementById("revisionReasonInput").value.trim(),
+    author: existing?.author || ({ admin: "관리자", editor: "데이터 수정자" }[getUserRole()] || "-") ,
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  if (existing) Object.assign(existing, entry); else product.revisionHistory.push(entry);
+  await saveCurrentProduct();
+  closeRevisionModal();
+  renderRevisionHistory();
 }
 
 async function setModuleAvailable(moduleName, checked) {
@@ -295,6 +391,16 @@ function generateReportHtml() {
   const newVersionCount = getNewVersionItems(product).length;
   const groups = getItemsByModule();
   const today = new Date().toISOString().slice(0, 10);
+  const revisionRows = getRevisionHistory().map(item => `
+    <tr>
+      <td>${escapeHtml(item.revisionNumber)}</td>
+      <td>${escapeHtml(item.status || "예정")}</td>
+      <td>${escapeHtml(item.plannedDate || "-")}</td>
+      <td>${escapeHtml(item.completedDate || "-")}</td>
+      <td>${escapeHtml(item.reason || "-")}</td>
+      <td>${escapeHtml(item.author || "-")}</td>
+    </tr>
+  `).join("");
 
   const moduleSections = Object.entries(groups).map(([moduleName, items]) => {
     const rows = items.map(item => `
@@ -469,6 +575,12 @@ function generateReportHtml() {
         </div>
       </div>
 
+      <h2>CTD 개정이력</h2>
+      <table>
+        <thead><tr><th>개정번호</th><th>상태</th><th>예정일</th><th>완료일</th><th>개정사유</th><th>작성자</th></tr></thead>
+        <tbody>${revisionRows || `<tr><td colspan="6">등록된 개정이력이 없습니다.</td></tr>`}</tbody>
+      </table>
+
       ${moduleSections}
     </body>
     </html>
@@ -585,5 +697,14 @@ function bindEvents() {
 }
 
 document.getElementById("printReportBtn").addEventListener("click", printPdfReport);
+document.getElementById("openRevisionModalBtn").addEventListener("click", () => openRevisionModal());
+document.getElementById("closeRevisionModalBtn").addEventListener("click", closeRevisionModal);
+document.getElementById("cancelRevisionBtn").addEventListener("click", closeRevisionModal);
+document.getElementById("revisionForm").addEventListener("submit", saveRevision);
+document.getElementById("revisionStatusInput").addEventListener("change", event => {
+  if (event.target.value === "완료" && !document.getElementById("revisionCompletedDateInput").value) {
+    document.getElementById("revisionCompletedDateInput").value = new Date().toISOString().slice(0, 10);
+  }
+});
 
 init();

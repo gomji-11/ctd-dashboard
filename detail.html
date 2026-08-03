@@ -57,6 +57,27 @@
       </div>
     </section>
 
+    <section class="bg-white rounded-2xl shadow overflow-hidden mb-8">
+      <div class="p-6 border-b flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 class="text-lg font-semibold">CTD 개정이력</h2>
+          <p class="text-sm text-slate-500 mt-1">품목별 개정 일정과 완료 내역을 관리합니다.</p>
+        </div>
+        <button id="openRevisionModalBtn" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700">+ 개정이력 등록</button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 bg-slate-50 border-b">
+        <div class="bg-white rounded-xl border p-4"><p class="text-xs text-slate-500">전체 이력</p><p id="revisionTotalCount" class="text-2xl font-bold mt-1">0</p></div>
+        <div class="bg-white rounded-xl border p-4"><p class="text-xs text-slate-500">진행 중·예정</p><p id="revisionOpenCount" class="text-2xl font-bold mt-1 text-amber-600">0</p></div>
+        <div class="bg-white rounded-xl border p-4"><p class="text-xs text-slate-500">완료</p><p id="revisionCompleteCount" class="text-2xl font-bold mt-1 text-emerald-600">0</p></div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-[980px] w-full text-sm">
+          <thead class="bg-slate-100 text-slate-600"><tr><th class="px-4 py-3 text-left">개정번호</th><th class="px-4 py-3 text-center">상태</th><th class="px-4 py-3 text-center">예정일</th><th class="px-4 py-3 text-center">완료일</th><th class="px-4 py-3 text-left">개정사유</th><th class="px-4 py-3 text-center">작성자</th><th class="px-4 py-3 text-center">관리</th></tr></thead>
+          <tbody id="revisionTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="bg-white rounded-2xl shadow overflow-hidden">
       <div class="p-6 border-b">
         <h2 class="text-lg font-semibold">CTD 세부 항목 구비현황</h2>
@@ -70,6 +91,21 @@
 
   </div>
 
-  <script type="module" src="js/detail.js"></script>
+  <div id="revisionModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 mx-4">
+      <div class="flex justify-between items-center mb-6"><h2 id="revisionModalTitle" class="text-xl font-bold">개정이력 등록</h2><button id="closeRevisionModalBtn" class="text-slate-400 hover:text-slate-700 text-2xl">&times;</button></div>
+      <form id="revisionForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input type="hidden" id="editingRevisionId" />
+        <div><label class="block text-sm font-medium mb-1">개정번호</label><input id="revisionNumberInput" required placeholder="예: Rev. 1" class="w-full border rounded-lg px-3 py-2" /></div>
+        <div><label class="block text-sm font-medium mb-1">상태</label><select id="revisionStatusInput" class="w-full border rounded-lg px-3 py-2"><option value="예정">예정</option><option value="진행 중">진행 중</option><option value="완료">완료</option></select></div>
+        <div><label class="block text-sm font-medium mb-1">예정일</label><input id="revisionPlannedDateInput" type="date" class="w-full border rounded-lg px-3 py-2" /></div>
+        <div><label class="block text-sm font-medium mb-1">완료일</label><input id="revisionCompletedDateInput" type="date" class="w-full border rounded-lg px-3 py-2" /></div>
+        <div class="md:col-span-2"><label class="block text-sm font-medium mb-1">개정사유</label><textarea id="revisionReasonInput" required rows="4" placeholder="개정 내용을 입력하세요" class="w-full border rounded-lg px-3 py-2 resize-y"></textarea></div>
+        <div class="md:col-span-2 flex justify-end gap-3 mt-2"><button type="button" id="cancelRevisionBtn" class="px-4 py-2 rounded-lg border">취소</button><button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">저장</button></div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="js/detail.js?v=2.3.0"></script>
 </body>
 </html>
