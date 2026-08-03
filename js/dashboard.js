@@ -75,8 +75,8 @@ function render(products) {
     ? `자사 품목의 ${Math.round(ownConvertedCount / ownProducts.length * 100)}%`
     : "자사 품목 기준";
   document.getElementById("contractConversionSummary").textContent = contractProducts.length
-    ? `위탁 품목의 ${Math.round(contractConvertedCount / contractProducts.length * 100)}%`
-    : "위탁 품목 중 CTD 전환";
+    ? `전체 위탁 ${contractProducts.length}개 · CTD 전환율 ${Math.round(contractConvertedCount / contractProducts.length * 100)}%`
+    : "전체 위탁 0개 · CTD 전환율 0%";
 
   const commonLegend = { position: "right", labels: { usePointStyle: true, boxWidth: 9, padding: 18 } };
   const ownTotal = ownProducts.length;
