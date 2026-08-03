@@ -4,13 +4,28 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="css/style.css?v=2.3.3" />
   <title>CTD 품목 상세 관리</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-slate-100 text-slate-900">
-  <div class="max-w-7xl mx-auto px-6 py-8">
+<body class="dashboard-body bg-slate-100 text-slate-900">
+  <div class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">CTD</div>
+        <div><strong>CTD 구비현황</strong><span>관리시스템</span></div>
+      </div>
+      <nav class="sidebar-nav" aria-label="주 메뉴">
+        <a href="index.html"><span>⌂</span>대시보드</a>
+        <a href="ctd.html" class="active"><span>▣</span>CTD 관리</a>
+      </nav>
+      <div class="sidebar-version">Aju Healthcare<br />v2.3.3</div>
+    </aside>
+
+    <main class="dashboard-main">
+      <div class="max-w-7xl mx-auto">
 
     <div class="flex justify-between items-center mb-6">
       <a href="ctd.html" class="text-blue-600 hover:underline">
@@ -93,6 +108,8 @@
       <div id="moduleContainer" class="divide-y divide-slate-100"></div>
     </section>
 
+      </div>
+    </main>
   </div>
 
   <div id="revisionModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
@@ -110,6 +127,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/detail.js?v=2.3.2"></script>
+  <script type="module" src="js/detail.js?v=2.3.3"></script>
 </body>
 </html>
