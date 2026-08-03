@@ -14,19 +14,40 @@ Chart.defaults.font.family = "Pretendard, Apple SD Gothic Neo, Noto Sans KR, san
 
 const centerTextPlugin = {
   id: "centerText",
-  afterDraw(chart) {
+  afterDraw(chart, _args, options) {
     if (chart.config.type !== "doughnut") return;
     const values = chart.data.datasets[0].data;
     const total = values.reduce((sum, value) => sum + value, 0);
+    const stats = options.stats;
     const { ctx, chartArea: { left, right, top, bottom } } = chart;
+    const centerX = (left + right) / 2;
+    const centerY = (top + bottom) / 2;
     ctx.save();
     ctx.textAlign = "center";
-    ctx.fillStyle = "#64748b";
-    ctx.font = "600 12px sans-serif";
-    ctx.fillText("전체", (left + right) / 2, (top + bottom) / 2 - 5);
-    ctx.fillStyle = "#0f172a";
-    ctx.font = "700 22px sans-serif";
-    ctx.fillText(`${total}개`, (left + right) / 2, (top + bottom) / 2 + 23);
+    if (stats) {
+      ctx.fillStyle = "#64748b";
+      ctx.font = "600 11px sans-serif";
+      ctx.fillText("자사 전체", centerX, centerY - 45);
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "700 18px sans-serif";
+      ctx.fillText(`${stats.total}개`, centerX, centerY - 24);
+      ctx.fillStyle = "#64748b";
+      ctx.font = "600 11px sans-serif";
+      ctx.fillText("CTD 전환", centerX, centerY - 3);
+      ctx.fillStyle = "#2474e5";
+      ctx.font = "700 18px sans-serif";
+      ctx.fillText(`${stats.converted}개`, centerX, centerY + 18);
+      ctx.fillStyle = "#64748b";
+      ctx.font = "600 11px sans-serif";
+      ctx.fillText(`구비율 ${stats.rate}%`, centerX, centerY + 42);
+    } else {
+      ctx.fillStyle = "#64748b";
+      ctx.font = "600 12px sans-serif";
+      ctx.fillText("전체", centerX, centerY - 5);
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "700 22px sans-serif";
+      ctx.fillText(`${total}개`, centerX, centerY + 23);
+    }
     ctx.restore();
   }
 };
@@ -58,10 +79,32 @@ function render(products) {
     : "위탁 품목 중 CTD 전환";
 
   const commonLegend = { position: "right", labels: { usePointStyle: true, boxWidth: 9, padding: 18 } };
+  const ownTotal = ownProducts.length;
+  const ownPendingCount = ownTotal - ownConvertedCount;
+  const ownConversionRate = ownTotal ? Math.round(ownConvertedCount / ownTotal * 100) : 0;
+  const ownPendingRate = ownTotal ? 100 - ownConversionRate : 0;
   replaceChart("conversionChart", {
     type: "doughnut",
-    data: { labels: ["전환 완료", "전환 미완료"], datasets: [{ data: [ownConvertedCount, ownProducts.length - ownConvertedCount], backgroundColor: ["#2474e5", "#dce3ec"], borderWidth: 0 }] },
-    options: { responsive: true, maintainAspectRatio: false, cutout: "66%", plugins: { legend: commonLegend, tooltip: { callbacks: { label: item => ` ${item.label}: ${item.raw}개` } } } },
+    data: { labels: ["전환 완료", "전환 미완료"], datasets: [{ data: [ownConvertedCount, ownPendingCount], backgroundColor: ["#2474e5", "#dce3ec"], borderWidth: 0 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: "66%",
+      plugins: {
+        centerText: { stats: { total: ownTotal, converted: ownConvertedCount, rate: ownConversionRate } },
+        legend: {
+          ...commonLegend,
+          labels: {
+            ...commonLegend.labels,
+            generateLabels: () => [
+              { text: `전환 완료 ${ownConvertedCount}개 (${ownConversionRate}%)`, fillStyle: "#2474e5", strokeStyle: "#2474e5", pointStyle: "circle", hidden: false, datasetIndex: 0, index: 0 },
+              { text: `전환 미완료 ${ownPendingCount}개 (${ownPendingRate}%)`, fillStyle: "#dce3ec", strokeStyle: "#dce3ec", pointStyle: "circle", hidden: false, datasetIndex: 0, index: 1 }
+            ]
+          }
+        },
+        tooltip: { callbacks: { label: item => ` ${item.label}: ${item.raw}개` } }
+      }
+    },
     plugins: [centerTextPlugin]
   });
 
