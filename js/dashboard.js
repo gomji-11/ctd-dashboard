@@ -40,18 +40,22 @@ function render(products) {
   const ownProducts = products.filter(own);
   const contractProducts = products.filter(contract);
   const ownConvertedCount = ownProducts.filter(converted).length;
+  const contractConvertedCount = contractProducts.filter(converted).length;
   const averageRate = products.length
     ? Math.round(products.reduce((sum, product) => sum + getCompletionRate(product), 0) / products.length)
     : 0;
 
   document.getElementById("allProducts").firstChild.nodeValue = products.length;
   document.getElementById("totalProducts").firstChild.nodeValue = ownProducts.length;
-  document.getElementById("contractTotalProducts").firstChild.nodeValue = contractProducts.length;
   document.getElementById("convertedProducts").firstChild.nodeValue = ownConvertedCount;
+  document.getElementById("contractConvertedProducts").firstChild.nodeValue = contractConvertedCount;
   document.getElementById("averageCompletionRate").textContent = `${averageRate}%`;
   document.getElementById("conversionSummary").textContent = ownProducts.length
     ? `자사 품목의 ${Math.round(ownConvertedCount / ownProducts.length * 100)}%`
     : "자사 품목 기준";
+  document.getElementById("contractConversionSummary").textContent = contractProducts.length
+    ? `위탁 품목의 ${Math.round(contractConvertedCount / contractProducts.length * 100)}%`
+    : "위탁 품목 중 CTD 전환";
 
   const commonLegend = { position: "right", labels: { usePointStyle: true, boxWidth: 9, padding: 18 } };
   replaceChart("conversionChart", {
