@@ -4,20 +4,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="css/style.css?v=2.2.0" />
   <title>CTD 관리시스템 · CTD 관리</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-100 text-slate-900">
-  <div class="max-w-7xl mx-auto px-6 py-8">
-    <header class="mb-8">
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div><h1 class="text-3xl font-bold">CTD 관리</h1><p class="text-slate-500 mt-2">Aju Healthcare · v2.0.1 · 자사/위탁 품목별 CTD 현황 관리</p></div>
-        <nav class="flex gap-2"><a href="index.html" class="px-4 py-2 rounded-xl bg-white border text-slate-700 font-semibold hover:bg-slate-50">대시보드</a><a href="ctd.html" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold">CTD 관리</a></nav>
+<body class="dashboard-body ctd-body">
+  <div class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">CTD</div>
+        <div><strong>CTD 구비현황</strong><span>관리시스템</span></div>
       </div>
-    </header>
+      <nav class="sidebar-nav" aria-label="주 메뉴">
+        <a href="index.html"><span>⌂</span>대시보드</a>
+        <a href="ctd.html" class="active"><span>▣</span>CTD 관리</a>
+      </nav>
+      <div class="sidebar-version">Aju Healthcare<br />v2.2.0</div>
+    </aside>
 
-    <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-      <div class="p-6 border-b flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+    <main class="dashboard-main ctd-main">
+      <header class="dashboard-header ctd-page-header">
+        <div><p class="eyebrow">CTD MANAGEMENT</p><h1>CTD 관리</h1><p class="ctd-header-copy">자사·위탁 품목별 CTD 구비현황을 관리합니다.</p></div>
+        <a href="index.html" class="manage-link">대시보드 바로가기 <span>→</span></a>
+      </header>
+
+    <section class="ctd-panel bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="ctd-toolbar p-6 border-b flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div><h2 class="text-xl font-bold">품목별 CTD 현황</h2><p class="text-sm text-slate-500 mt-1">품목명 가나다순이 기본 정렬입니다.</p></div>
         <div class="flex flex-wrap gap-2">
           <button id="openAddModalBtn" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700">+ 품목 추가</button>
@@ -27,7 +39,7 @@
         </div>
       </div>
 
-      <div class="p-6 border-b">
+      <div class="ctd-filters p-6 border-b">
         <div class="inline-flex p-1 bg-slate-100 rounded-xl mb-4">
           <button class="type-tab px-5 py-2 rounded-lg font-semibold bg-white shadow-sm text-blue-700" data-type="자사제조">자사 품목 <span id="ownTabCount" class="ml-1 text-xs">0</span></button>
           <button class="type-tab px-5 py-2 rounded-lg font-semibold text-slate-600" data-type="위탁제조">위탁 품목 <span id="contractTabCount" class="ml-1 text-xs">0</span></button>
@@ -39,7 +51,7 @@
         </div>
       </div>
 
-      <div class="overflow-x-auto">
+      <div class="ctd-table-wrap overflow-x-auto">
         <table class="min-w-[1180px] w-full text-sm">
           <thead class="bg-slate-100 text-slate-700"><tr>
             <th class="px-5 py-4 text-left w-[250px]">품목명</th><th class="px-4 py-4 text-center w-[100px]">허가번호</th><th class="px-4 py-4 text-center w-[110px]">제조구분</th><th class="px-4 py-4 text-center w-[130px]">수탁제조사</th><th class="px-4 py-4 text-center w-[80px]">제형</th><th class="px-4 py-4 text-center w-[115px]">CTD 전환</th><th class="px-4 py-4 text-center w-[135px]">필수 구비율</th><th class="px-4 py-4 text-center w-[135px]">신버전 반영률</th><th class="px-4 py-4 text-center w-[90px]">허가상태</th><th class="px-4 py-4 text-center w-[75px]">관리</th>
@@ -50,6 +62,7 @@
         </table>
       </div>
     </section>
+    </main>
   </div>
 
   <div id="productModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
@@ -68,6 +81,6 @@
       </form>
     </div>
   </div>
-  <script type="module" src="js/ctd.js?v=2.0.2"></script>
+  <script type="module" src="js/ctd.js?v=2.2.0"></script>
 </body>
 </html>

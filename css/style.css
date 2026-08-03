@@ -36,3 +36,33 @@
 @media (max-width: 1100px) { .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .dashboard-shell { display: block; }.dashboard-sidebar { position: relative; width: auto; height: auto; padding: 18px; }.sidebar-brand { padding-bottom: 16px; }.sidebar-nav { grid-template-columns: 1fr 1fr; }.sidebar-version { display: none; }.dashboard-main { padding: 22px 16px; }.dashboard-header { align-items: flex-start; }.manage-link { font-size: 0; }.manage-link span { font-size: 16px; }.metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.chart-grid { grid-template-columns: 1fr; }.dashboard-shell > #authBar { position: static; margin: 14px 18px; } }
 @media (max-width: 440px) { .metric-grid { grid-template-columns: 1fr; } }
+
+/* CTD management v2.2 */
+.ctd-main { padding-bottom: 34px; }
+.ctd-page-header { align-items: flex-start; }
+.ctd-header-copy { margin: 7px 0 0; color: #718096; font-size: 12px; }
+.ctd-panel { border-color: #e1e8f0 !important; border-radius: 12px !important; box-shadow: 0 3px 12px rgba(29, 54, 78, .04) !important; }
+.ctd-toolbar { padding: 20px 22px !important; background: #fff; }
+.ctd-toolbar h2 { color: #17263a; font-size: 16px; }
+.ctd-toolbar p { color: #94a3b8; font-size: 11px; }
+.ctd-toolbar button, .ctd-toolbar label { border-radius: 8px !important; font-size: 11px !important; font-weight: 700; box-shadow: 0 2px 5px rgba(15, 39, 58, .08); }
+.ctd-filters { padding: 17px 22px 19px !important; background: #fbfcfe; }
+.ctd-filters .type-tab { border-radius: 8px !important; font-size: 12px; }
+.ctd-filters input, .ctd-filters select { min-height: 42px; border-color: #dce4ed; border-radius: 8px !important; background: white; color: #334155; font-size: 12px; outline: none; }
+.ctd-filters input:focus, .ctd-filters select:focus { border-color: #6eaae9; box-shadow: 0 0 0 3px rgba(36, 116, 229, .1); }
+.ctd-table-wrap { background: white; }
+.ctd-table-wrap table { color: #405267; }
+.ctd-table-wrap thead { background: #f4f7fb !important; color: #536579 !important; }
+.ctd-table-wrap th { padding-top: 13px !important; padding-bottom: 13px !important; border-bottom: 1px solid #e1e8f0; font-size: 11px; letter-spacing: -.1px; }
+.ctd-table-wrap td { padding-top: 17px !important; padding-bottom: 17px !important; font-size: 11px; }
+.ctd-table-wrap tbody tr { transition: background .15s ease; }
+.ctd-table-wrap tbody tr:hover { background: #f7faff !important; }
+.ctd-table-wrap tbody a { color: #176bd5; font-size: 12px; font-weight: 700; }
+.ctd-body #authBar { position: fixed; right: 34px; top: 82px; z-index: 30; }
+.ctd-body #productModal { font-family: Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+@media (max-width: 760px) {
+  .ctd-main { padding: 22px 16px; }
+  .ctd-page-header { gap: 12px; }
+  .ctd-toolbar, .ctd-filters { padding-left: 16px !important; padding-right: 16px !important; }
+  .ctd-body #authBar { position: static; margin: 14px 18px; }
+}
