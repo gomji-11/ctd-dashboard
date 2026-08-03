@@ -24,6 +24,7 @@ injectAuthBar();
 const productId = new URLSearchParams(window.location.search).get("id");
 
 let product = null;
+let activeRevisionId = null;
 
 let openedModules = {
   "Module 1": false,
@@ -56,6 +57,30 @@ function cloneCtdItems() {
 
 function getLatestRevision() {
   return getRevisionHistory()[0] || null;
+}
+
+function canEditCurrentRevision() {
+  const latest = getLatestRevision();
+  return canEditData() && Boolean(latest) && activeRevisionId === latest.id;
+}
+
+function startCtdEdit(revisionId) {
+  if (!canEditData()) return;
+  const latest = getLatestRevision();
+  if (!latest || latest.id !== revisionId) {
+    alert("과거 개정은 변경할 수 없습니다. 최신 개정의 구비현황만 수정해주세요.");
+    return;
+  }
+  activeRevisionId = revisionId;
+  renderRevisionHistory();
+  renderModules();
+  document.getElementById("moduleContainer").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function finishCtdEdit() {
+  activeRevisionId = null;
+  renderRevisionHistory();
+  renderModules();
 }
 
 function createInitialRevision() {
@@ -126,7 +151,7 @@ function renderSummary() {
 }
 
 async function saveCurrentProduct() {
-  if (!canEditData()) return;
+  if (!canEditCurrentRevision()) return;
   syncLatestRevisionSnapshot();
   await saveProduct(product);
 }
@@ -145,7 +170,7 @@ function getItemsByModule() {
 }
 
 async function setModuleRequired(moduleName, checked) {
-  if (!canEditData()) return;
+  if (!canEditCurrentRevision()) return;
   product.ctdItems.forEach(item => {
     if (item.module === moduleName) {
       item.required = checked;
@@ -185,12 +210,21 @@ function renderRevisionHistory() {
       <td class="px-4 py-4 whitespace-pre-line">${escapeHtml(item.reason || "-")}</td>
       <td class="px-4 py-4 text-center"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">${Array.isArray(item.ctdSnapshot) ? item.ctdSnapshot.length : 0}개 항목 연동</span></td>
       <td class="px-4 py-4 text-center">${escapeHtml(item.author || "-")}</td>
-      <td class="px-4 py-4 text-center">${canEditData() ? `<button class="revision-edit-btn text-blue-600 hover:underline mr-2" data-id="${escapeHtml(item.id)}">수정</button><button class="revision-delete-btn text-rose-600 hover:underline" data-id="${escapeHtml(item.id)}">삭제</button>` : `<span class="text-slate-400">조회</span>`}</td>
+      <td class="px-4 py-4 text-center">${canEditData() ? `<button class="revision-edit-btn text-blue-600 hover:underline mr-2" data-id="${escapeHtml(item.id)}">이력 수정</button>${item.id === revisions[0]?.id ? `<button class="ctd-edit-btn text-emerald-700 hover:underline mr-2" data-id="${escapeHtml(item.id)}">구비현황 수정</button>` : ""}<button class="revision-delete-btn text-rose-600 hover:underline" data-id="${escapeHtml(item.id)}">삭제</button>` : `<span class="text-slate-400">조회</span>`}</td>
     </tr>`).join("");
   }
   document.getElementById("openRevisionModalBtn").classList.toggle("hidden", !canEditData());
   const latest = revisions[0];
   document.getElementById("currentRevisionNumber").textContent = latest ? `개정번호 ${latest.revisionNumber}` : "개정번호 1";
+  const editing = canEditCurrentRevision();
+  const status = document.getElementById("ctdEditStatus");
+  status.textContent = editing
+    ? `✏️ 개정번호 ${latest.revisionNumber} 수정 중 · 변경 내용은 이 개정이력에 자동 저장됩니다.`
+    : "🔒 조회 상태 · 실수 방지를 위해 편집이 잠겨 있습니다.";
+  status.className = editing
+    ? "mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800"
+    : "mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600";
+  document.getElementById("finishCtdEditBtn").classList.toggle("hidden", !editing);
   bindRevisionTableEvents();
 }
 
@@ -217,11 +251,16 @@ function bindRevisionTableEvents() {
   document.querySelectorAll(".revision-edit-btn").forEach(button => button.addEventListener("click", () => {
     openRevisionModal(product.revisionHistory.find(item => item.id === button.dataset.id));
   }));
+  document.querySelectorAll(".ctd-edit-btn").forEach(button => button.addEventListener("click", () => {
+    startCtdEdit(button.dataset.id);
+  }));
   document.querySelectorAll(".revision-delete-btn").forEach(button => button.addEventListener("click", async () => {
     if (!canEditData() || !confirm("이 개정이력을 삭제하시겠습니까?")) return;
+    if (activeRevisionId === button.dataset.id) activeRevisionId = null;
     product.revisionHistory = product.revisionHistory.filter(item => item.id !== button.dataset.id);
-    await saveCurrentProduct();
+    await saveProduct(product);
     renderRevisionHistory();
+    renderModules();
   }));
 }
 
@@ -249,13 +288,14 @@ async function saveRevision(event) {
   };
   entry.ctdSnapshot = existing?.ctdSnapshot || cloneCtdItems();
   if (existing) Object.assign(existing, entry); else product.revisionHistory.push(entry);
-  await saveCurrentProduct();
+  syncLatestRevisionSnapshot();
+  await saveProduct(product);
   closeRevisionModal();
   renderRevisionHistory();
 }
 
 async function setModuleAvailable(moduleName, checked) {
-  if (!canEditData()) return;
+  if (!canEditCurrentRevision()) return;
   product.ctdItems.forEach(item => {
     if (item.module === moduleName) {
       item.available = checked;
@@ -645,8 +685,6 @@ function printPdfReport() {
 
 
 function applyRoleToDetail() {
-  if (canEditData()) return;
-
   const editableSelectors = [
     ".module-required-toggle",
     ".module-available-toggle",
@@ -659,8 +697,9 @@ function applyRoleToDetail() {
 
   editableSelectors.forEach(selector => {
     document.querySelectorAll(selector).forEach(element => {
-      element.disabled = true;
-      element.classList.add("opacity-60", "cursor-not-allowed");
+      element.disabled = !canEditCurrentRevision();
+      element.classList.toggle("opacity-60", !canEditCurrentRevision());
+      element.classList.toggle("cursor-not-allowed", !canEditCurrentRevision());
     });
   });
 }
@@ -690,6 +729,7 @@ function bindEvents() {
 
   document.querySelectorAll(".required-checkbox").forEach(checkbox => {
     checkbox.addEventListener("change", async event => {
+      if (!canEditCurrentRevision()) return;
       const index = Number(event.target.dataset.index);
       product.ctdItems[index].required = event.target.checked;
 
@@ -701,6 +741,7 @@ function bindEvents() {
 
   document.querySelectorAll(".version-status-select").forEach(select => {
     select.addEventListener("change", async event => {
+      if (!canEditCurrentRevision()) return;
       const index = Number(event.target.dataset.index);
       product.ctdItems[index].ctdVersionStatus = event.target.value;
 
@@ -712,6 +753,7 @@ function bindEvents() {
 
   document.querySelectorAll(".version-number-input").forEach(input => {
     input.addEventListener("change", async event => {
+      if (!canEditCurrentRevision()) return;
       const index = Number(event.target.dataset.index);
       product.ctdItems[index].versionNumber = event.target.value.trim();
 
@@ -721,6 +763,7 @@ function bindEvents() {
 
   document.querySelectorAll(".revision-date-input").forEach(input => {
     input.addEventListener("change", async event => {
+      if (!canEditCurrentRevision()) return;
       const index = Number(event.target.dataset.index);
       product.ctdItems[index].revisionDate = event.target.value;
 
@@ -730,6 +773,7 @@ function bindEvents() {
 
   document.querySelectorAll(".available-checkbox").forEach(checkbox => {
     checkbox.addEventListener("change", async event => {
+      if (!canEditCurrentRevision()) return;
       const index = Number(event.target.dataset.index);
       product.ctdItems[index].available = event.target.checked;
 
@@ -741,6 +785,7 @@ function bindEvents() {
 }
 
 document.getElementById("printReportBtn").addEventListener("click", printPdfReport);
+document.getElementById("finishCtdEditBtn").addEventListener("click", finishCtdEdit);
 document.getElementById("openRevisionModalBtn").addEventListener("click", () => openRevisionModal());
 document.getElementById("closeRevisionModalBtn").addEventListener("click", closeRevisionModal);
 document.getElementById("cancelRevisionBtn").addEventListener("click", closeRevisionModal);
