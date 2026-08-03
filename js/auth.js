@@ -135,7 +135,7 @@ function renderLoginScreen() {
       <div class="bg-white w-full max-w-md rounded-2xl shadow p-8">
         <div class="text-center mb-6">
           <h1 class="text-2xl font-bold mb-2">CTD 구비현황 관리시스템</h1>
-          <p class="text-slate-500">Aju Healthcare · v1.2.2</p>
+          <p class="text-slate-500">Aju Healthcare · v2.0.0</p>
         </div>
 
         <label class="block text-sm font-medium mb-2">비밀번호</label>
@@ -173,16 +173,24 @@ function renderLoginScreen() {
     loginBtn.disabled = true;
     loginBtn.textContent = "확인 중...";
 
-    const result = await login(passwordInput.value);
+    try {
+      const result = await login(passwordInput.value);
 
-    if (result) {
-      location.reload();
-      return;
+      if (result) {
+        location.reload();
+        return;
+      }
+
+      loginError.textContent = "비밀번호가 올바르지 않습니다.";
+      loginError.classList.remove("hidden");
+    } catch (error) {
+      console.error(error);
+      loginError.textContent = "로그인 확인 중 오류가 발생했습니다. Firebase 연결을 확인하세요.";
+      loginError.classList.remove("hidden");
+    } finally {
+      loginBtn.disabled = false;
+      loginBtn.textContent = "입장하기";
     }
-
-    loginError.classList.remove("hidden");
-    loginBtn.disabled = false;
-    loginBtn.textContent = "입장하기";
   });
 
   passwordInput.addEventListener("keydown", event => {
