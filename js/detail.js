@@ -57,6 +57,15 @@ function cloneCtdItems() {
   return product.ctdItems.map(item => ({ ...item }));
 }
 
+function cloneRevisionSnapshot(revision) {
+  const sourceItems = Array.isArray(revision?.ctdSnapshot) ? revision.ctdSnapshot : product.ctdItems;
+  return sourceItems.map(item => ({ ...item }));
+}
+
+function getNextRevisionNumber() {
+  return Math.max(0, ...product.revisionHistory.map(item => Number.parseInt(String(item.revisionNumber).replace(/\D/g, ""), 10) || 0)) + 1;
+}
+
 function getLatestRevision() {
   return getRevisionHistory()[0] || null;
 }
@@ -221,7 +230,7 @@ function renderRevisionHistory() {
       <td class="px-4 py-4 whitespace-pre-line">${escapeHtml(item.reason || "-")}</td>
       <td class="px-4 py-4 text-center"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">${Array.isArray(item.ctdSnapshot) ? item.ctdSnapshot.length : 0}개 항목 연동</span></td>
       <td class="px-4 py-4 text-center">${escapeHtml(item.author || "-")}</td>
-      <td class="px-4 py-4 text-center"><button class="revision-view-btn text-violet-700 hover:underline mr-2" data-id="${escapeHtml(item.id)}">구비현황 보기</button>${canEditData() ? `<button class="revision-edit-btn text-blue-600 hover:underline mr-2" data-id="${escapeHtml(item.id)}">이력 수정</button>${item.id === revisions[0]?.id ? `<button class="ctd-edit-btn text-emerald-700 hover:underline mr-2" data-id="${escapeHtml(item.id)}">구비현황 수정</button>` : ""}<button class="revision-delete-btn text-rose-600 hover:underline" data-id="${escapeHtml(item.id)}">삭제</button>` : ""}</td>
+      <td class="px-4 py-4 text-center"><button class="revision-view-btn text-violet-700 hover:underline mr-2" data-id="${escapeHtml(item.id)}">구비현황 보기</button>${canEditData() ? `<button class="revision-copy-btn text-indigo-700 hover:underline mr-2" data-id="${escapeHtml(item.id)}">이 개정본으로 새 개정 만들기</button><button class="revision-edit-btn text-blue-600 hover:underline mr-2" data-id="${escapeHtml(item.id)}">이력 수정</button>${item.id === revisions[0]?.id ? `<button class="ctd-edit-btn text-emerald-700 hover:underline mr-2" data-id="${escapeHtml(item.id)}">구비현황 수정</button>` : ""}<button class="revision-delete-btn text-rose-600 hover:underline" data-id="${escapeHtml(item.id)}">삭제</button>` : ""}</td>
     </tr>`).join("");
   }
   document.getElementById("openRevisionModalBtn").classList.toggle("hidden", !canEditData());
@@ -248,7 +257,7 @@ function renderRevisionHistory() {
 
 function openRevisionModal(revision = null) {
   if (!canEditData()) return;
-  const nextRevisionNumber = Math.max(0, ...product.revisionHistory.map(item => Number.parseInt(String(item.revisionNumber).replace(/\D/g, ""), 10) || 0)) + 1;
+  const nextRevisionNumber = getNextRevisionNumber();
   document.getElementById("revisionModalTitle").textContent = revision ? "개정이력 수정" : "개정이력 등록";
   document.getElementById("editingRevisionId").value = revision?.id || "";
   document.getElementById("revisionNumberInput").value = revision?.revisionNumber || String(nextRevisionNumber);
@@ -263,12 +272,53 @@ function closeRevisionModal() {
   document.getElementById("editingRevisionId").value = "";
 }
 
+async function createRevisionFrom(revisionId) {
+  if (!canEditData()) return;
+  const sourceRevision = product.revisionHistory.find(item => item.id === revisionId);
+  if (!sourceRevision) {
+    alert("기준으로 사용할 개정본을 찾을 수 없습니다.");
+    return;
+  }
+
+  const nextRevisionNumber = getNextRevisionNumber();
+  if (!confirm(`개정번호 ${sourceRevision.revisionNumber}의 구비현황을 복사해 개정번호 ${nextRevisionNumber}을(를) 만드시겠습니까?\n\n기존 개정본은 변경되지 않으며, 새 개정에서 필요한 항목만 수정할 수 있습니다.`)) return;
+
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const copiedItems = cloneRevisionSnapshot(sourceRevision);
+  const entry = {
+    id: `REV-${Date.now()}`,
+    revisionNumber: String(nextRevisionNumber),
+    revisionDate: today,
+    reason: `개정번호 ${sourceRevision.revisionNumber} 기준 신규 개정`,
+    author: ({ admin: "관리자", editor: "데이터 수정자" }[getUserRole()] || "-"),
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+    sourceRevisionId: sourceRevision.id,
+    ctdSnapshot: copiedItems.map(item => ({ ...item }))
+  };
+
+  product.ctdItems = copiedItems.map(item => ({ ...item }));
+  product.revisionHistory.push(entry);
+  await saveProduct(product);
+  selectedRevisionId = entry.id;
+  activeRevisionId = entry.id;
+  renderSummary();
+  renderRevisionHistory();
+  renderModules();
+  document.getElementById("moduleContainer").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function bindRevisionTableEvents() {
   document.querySelectorAll(".revision-view-btn").forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
     selectRevision(button.dataset.id);
   }));
   document.querySelectorAll(".revision-view-row").forEach(row => row.addEventListener("click", () => selectRevision(row.dataset.id)));
+  document.querySelectorAll(".revision-copy-btn").forEach(button => button.addEventListener("click", async event => {
+    event.stopPropagation();
+    await createRevisionFrom(button.dataset.id);
+  }));
   document.querySelectorAll(".revision-edit-btn").forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
     openRevisionModal(product.revisionHistory.find(item => item.id === button.dataset.id));
