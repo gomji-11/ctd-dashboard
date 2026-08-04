@@ -50,6 +50,7 @@ async function init() {
 
   renderSummary();
   renderRevisionHistory();
+  renderModuleLatestStatus();
   renderModules();
 }
 
@@ -176,6 +177,7 @@ async function saveCurrentProduct() {
   if (!canEditCurrentRevision()) return;
   syncLatestRevisionSnapshot();
   await saveProduct(product);
+  renderModuleLatestStatus();
 }
 
 function getItemsByModule() {
@@ -214,6 +216,66 @@ function escapeHtml(value) {
 
 function getRevisionHistory() {
   return [...product.revisionHistory].sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+}
+
+const latestModuleCodes = [
+  "2.3.S", "2.3.P.1", "2.3.P.2", "2.3.P.3", "2.3.P.4", "2.3.P.5", "2.3.P.6", "2.3.P.7", "2.3.P.8",
+  "3.2.S", "3.2.P.1", "3.2.P.2", "3.2.P.3", "3.2.P.4", "3.2.P.5", "3.2.P.6", "3.2.P.7", "3.2.P.8"
+];
+
+function belongsToLatestModule(itemCode, moduleCode) {
+  return itemCode === moduleCode || itemCode.startsWith(`${moduleCode}.`);
+}
+
+function moduleSnapshotSignature(snapshot, moduleCode) {
+  return (Array.isArray(snapshot) ? snapshot : [])
+    .filter(item => belongsToLatestModule(String(item.code || ""), moduleCode))
+    .sort((a, b) => String(a.code).localeCompare(String(b.code)))
+    .map(item => [item.code, item.required, item.ctdVersionStatus, item.versionNumber, item.revisionDate, item.available]
+      .map(value => String(value ?? ""))
+      .join("|")
+    )
+    .join("\n");
+}
+
+function getLatestRevisionForModule(moduleCode) {
+  const revisions = [...getRevisionHistory()].reverse();
+  let previousSignature = "";
+  let latestMatch = null;
+
+  revisions.forEach((revision, index) => {
+    const snapshot = Array.isArray(revision.ctdSnapshot)
+      ? revision.ctdSnapshot
+      : (index === revisions.length - 1 ? product.ctdItems : []);
+    const signature = moduleSnapshotSignature(snapshot, moduleCode);
+    if (!signature) return;
+    if (latestMatch === null || signature !== previousSignature) latestMatch = revision;
+    previousSignature = signature;
+  });
+
+  return latestMatch;
+}
+
+function formatRevisionLabel(revisionNumber) {
+  const value = String(revisionNumber ?? "").trim();
+  if (!value) return "-";
+  return /^rev\.?\s*/i.test(value) ? value.replace(/^rev\.?\s*/i, "Rev.") : `Rev.${value}`;
+}
+
+function renderModuleLatestStatus() {
+  const grid = document.getElementById("moduleLatestGrid");
+  if (!grid) return;
+  const latestRevision = getLatestRevision();
+
+  grid.innerHTML = latestModuleCodes.map(moduleCode => {
+    const moduleRevision = getLatestRevisionForModule(moduleCode);
+    const changedInLatest = Boolean(moduleRevision && latestRevision && moduleRevision.id === latestRevision.id && getRevisionHistory().length > 1);
+    return `
+      <div class="min-w-0 rounded-md border px-1 py-2 text-center ${changedInLatest ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-slate-50"}" title="${escapeHtml(moduleCode)} · ${moduleRevision ? `개정번호 ${escapeHtml(moduleRevision.revisionNumber)}` : "등록 없음"}">
+        <div class="truncate text-[10px] leading-tight font-semibold text-slate-700">${escapeHtml(moduleCode)}</div>
+        <div class="mt-1 truncate text-[11px] leading-tight font-bold ${changedInLatest ? "text-amber-700" : "text-blue-700"}">${moduleRevision ? escapeHtml(formatRevisionLabel(moduleRevision.revisionNumber)) : "-"}</div>
+      </div>`;
+  }).join("");
 }
 
 function renderRevisionHistory() {
@@ -318,6 +380,7 @@ async function createRevisionFrom(revisionId) {
   activeRevisionId = entry.id;
   renderSummary();
   renderRevisionHistory();
+  renderModuleLatestStatus();
   renderModules();
   document.getElementById("moduleContainer").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -361,6 +424,7 @@ async function deleteRevisionFromModal() {
   closeRevisionModal();
   renderSummary();
   renderRevisionHistory();
+  renderModuleLatestStatus();
   renderModules();
 }
 
