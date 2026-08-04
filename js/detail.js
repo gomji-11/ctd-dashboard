@@ -241,9 +241,15 @@ function getRevisionHistory() {
   return [...product.revisionHistory].sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
 }
 
-const latestModuleCodes = [
-  "2.3.S", "2.3.P.1", "2.3.P.2", "2.3.P.3", "2.3.P.4", "2.3.P.5", "2.3.P.6", "2.3.P.7", "2.3.P.8",
-  "3.2.S", "3.2.P.1", "3.2.P.2", "3.2.P.3", "3.2.P.4", "3.2.P.5", "3.2.P.6", "3.2.P.7", "3.2.P.8"
+const latestModuleGroups = [
+  {
+    label: "모듈 2",
+    codes: ["2.3.S", "2.3.P.1", "2.3.P.2", "2.3.P.3", "2.3.P.4", "2.3.P.5", "2.3.P.6", "2.3.P.7", "2.3.P.8"]
+  },
+  {
+    label: "모듈 3",
+    codes: ["3.2.S", "3.2.P.1", "3.2.P.2", "3.2.P.3", "3.2.P.4", "3.2.P.5", "3.2.P.6", "3.2.P.7", "3.2.P.8"]
+  }
 ];
 
 function belongsToLatestModule(itemCode, moduleCode) {
@@ -284,15 +290,21 @@ function renderModuleLatestStatus() {
   if (!grid) return;
   const latestRevision = getLatestRevision();
 
-  grid.innerHTML = latestModuleCodes.map(moduleCode => {
-    const moduleRevision = getLatestRevisionForModule(moduleCode);
-    const changedInLatest = Boolean(moduleRevision && latestRevision && moduleRevision.id === latestRevision.id && getRevisionHistory().length > 1);
-    return `
-      <div class="min-w-0 rounded-md border px-1 py-2 text-center ${changedInLatest ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-slate-50"}" title="${escapeHtml(moduleCode)} · ${moduleRevision ? `버전 ${escapeHtml(formatRevisionLabel(moduleRevision.revisionNumber))}` : "등록 없음"}">
-        <div class="truncate text-[10px] leading-tight font-semibold text-slate-700">${escapeHtml(moduleCode)}</div>
-        <div class="mt-1 truncate text-[11px] leading-tight font-bold ${changedInLatest ? "text-amber-700" : "text-blue-700"}">${moduleRevision ? escapeHtml(formatRevisionLabel(moduleRevision.revisionNumber)) : "-"}</div>
-      </div>`;
-  }).join("");
+  grid.innerHTML = latestModuleGroups.map(group => `
+    <div class="grid gap-2" style="grid-template-columns:minmax(72px,0.7fr) repeat(9,minmax(0,1fr))">
+      <div class="flex min-w-0 items-center justify-center rounded-lg bg-blue-600 px-2 py-3 text-center text-xs font-bold text-white shadow-sm">
+        ${escapeHtml(group.label)}
+      </div>
+      ${group.codes.map(moduleCode => {
+        const moduleRevision = getLatestRevisionForModule(moduleCode);
+        const changedInLatest = Boolean(moduleRevision && latestRevision && moduleRevision.id === latestRevision.id && getRevisionHistory().length > 1);
+        return `
+          <div class="min-w-0 rounded-lg border px-2 py-3 text-center ${changedInLatest ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-slate-50"}" title="${escapeHtml(moduleCode)} · ${moduleRevision ? `버전 ${escapeHtml(formatRevisionLabel(moduleRevision.revisionNumber))}` : "등록 없음"}">
+            <div class="truncate text-xs leading-tight font-semibold text-slate-700">${escapeHtml(moduleCode)}</div>
+            <div class="mt-1.5 truncate text-sm leading-tight font-bold ${changedInLatest ? "text-amber-700" : "text-blue-700"}">${moduleRevision ? escapeHtml(formatRevisionLabel(moduleRevision.revisionNumber)) : "-"}</div>
+          </div>`;
+      }).join("")}
+    </div>`).join("");
 }
 
 function renderRevisionHistory() {
