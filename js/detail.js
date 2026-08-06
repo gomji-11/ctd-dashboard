@@ -340,7 +340,7 @@ function renderRevisionHistory() {
       <td class="px-4 py-4 whitespace-pre-line">${escapeHtml(item.reason || "-")}</td>
       <td class="px-4 py-4 text-center"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">${Array.isArray(item.ctdSnapshot) ? item.ctdSnapshot.length : 0}개 항목 연동</span></td>
       <td class="px-4 py-4 text-center">${escapeHtml(item.author || "-")}</td>
-      <td class="px-4 py-4 text-center whitespace-nowrap"><button class="revision-view-btn text-violet-700 hover:underline mr-3" data-id="${escapeHtml(item.id)}">구비현황 보기</button>${canEditData() ? `<button class="revision-copy-btn text-indigo-700 hover:underline mr-3" data-id="${escapeHtml(item.id)}">새 개정 생성</button><button class="revision-edit-btn text-blue-600 hover:underline" data-id="${escapeHtml(item.id)}">이력 수정</button>` : ""}</td>
+      <td class="px-4 py-4 text-center whitespace-nowrap"><button class="revision-view-btn text-violet-700 hover:underline mr-3" data-id="${escapeHtml(item.id)}">구비현황 보기</button>${canEditData() ? `<button class="revision-edit-btn text-blue-600 hover:underline" data-id="${escapeHtml(item.id)}">이력 수정</button>` : ""}</td>
     </tr>`).join("");
   }
   document.getElementById("openRevisionModalBtn").classList.toggle("hidden", !canEditData());
@@ -389,60 +389,12 @@ function closeRevisionModal() {
   document.getElementById("editingRevisionId").value = "";
 }
 
-async function createRevisionFrom(revisionId) {
-  if (!canEditData()) return;
-  const sourceRevision = product.revisionHistory.find(item => item.id === revisionId);
-  if (!sourceRevision) {
-    alert("기준으로 사용할 개정본을 찾을 수 없습니다.");
-    return;
-  }
-
-  const nextRevisionNumber = getNextRevisionNumber();
-  if (!confirm(`${formatRevisionLabel(sourceRevision.revisionNumber)}의 구비현황을 복사해 ${formatRevisionLabel(nextRevisionNumber)}을(를) 만드시겠습니까?\n\n기존 개정본은 변경되지 않으며, 새 개정에서 필요한 항목만 수정할 수 있습니다.`)) return;
-
-  const author = prompt("새 개정의 실제 작성자 이름을 입력하세요.", "")?.trim();
-  if (!author) {
-    alert("작성자를 입력해야 새 개정을 생성할 수 있습니다.");
-    return;
-  }
-
-  const now = new Date();
-  const today = now.toISOString().slice(0, 10);
-  const copiedItems = cloneRevisionSnapshot(sourceRevision);
-  const entry = {
-    id: `REV-${Date.now()}`,
-    revisionNumber: normalizeRevisionNumber(nextRevisionNumber),
-    revisionDate: today,
-    reason: `${formatRevisionLabel(sourceRevision.revisionNumber)} 기준 신규 개정`,
-    author,
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-    sourceRevisionId: sourceRevision.id,
-    ctdSnapshot: copiedItems.map(item => ({ ...item }))
-  };
-
-  product.ctdItems = copiedItems.map(item => ({ ...item }));
-  product.revisionHistory.push(entry);
-  await saveProduct(product);
-  selectedRevisionId = entry.id;
-  activeRevisionId = entry.id;
-  renderSummary();
-  renderRevisionHistory();
-  renderModuleLatestStatus();
-  renderModules();
-  document.getElementById("moduleContainer").scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
 function bindRevisionTableEvents() {
   document.querySelectorAll(".revision-view-btn").forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
     selectRevision(button.dataset.id);
   }));
   document.querySelectorAll(".revision-view-row").forEach(row => row.addEventListener("click", () => selectRevision(row.dataset.id)));
-  document.querySelectorAll(".revision-copy-btn").forEach(button => button.addEventListener("click", async event => {
-    event.stopPropagation();
-    await createRevisionFrom(button.dataset.id);
-  }));
   document.querySelectorAll(".revision-edit-btn").forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
     openRevisionModal(product.revisionHistory.find(item => item.id === button.dataset.id));
