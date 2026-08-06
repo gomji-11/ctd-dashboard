@@ -285,6 +285,19 @@ function getLatestRevisionForModule(moduleCode) {
   return latestMatch;
 }
 
+function getLatestVersionForModule(moduleCode) {
+  const candidates = product.ctdItems
+    .filter(item => belongsToLatestModule(String(item.code || ""), moduleCode))
+    .filter(item => normalizeRevisionNumber(item.versionNumber))
+    .sort((a, b) => {
+      const dateCompare = String(b.revisionDate || "").localeCompare(String(a.revisionDate || ""));
+      if (dateCompare !== 0) return dateCompare;
+      return parseRevisionNumber(b.versionNumber) - parseRevisionNumber(a.versionNumber);
+    });
+
+  return candidates.length ? formatRevisionLabel(candidates[0].versionNumber) : "-";
+}
+
 function renderModuleLatestStatus() {
   const grid = document.getElementById("moduleLatestGrid");
   if (!grid) return;
@@ -297,11 +310,12 @@ function renderModuleLatestStatus() {
       </div>
       ${group.codes.map(moduleCode => {
         const moduleRevision = getLatestRevisionForModule(moduleCode);
+        const moduleVersion = getLatestVersionForModule(moduleCode);
         const changedInLatest = Boolean(moduleRevision && latestRevision && moduleRevision.id === latestRevision.id && getRevisionHistory().length > 1);
         return `
-          <div class="min-w-0 rounded-lg border px-2 py-3 text-center ${changedInLatest ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-slate-50"}" title="${escapeHtml(moduleCode)} · ${moduleRevision ? `버전 ${escapeHtml(formatRevisionLabel(moduleRevision.revisionNumber))}` : "등록 없음"}">
+          <div class="min-w-0 rounded-lg border px-2 py-3 text-center ${changedInLatest ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-slate-50"}" title="${escapeHtml(moduleCode)} · ${moduleVersion !== "-" ? `버전 ${escapeHtml(moduleVersion)}` : "버전 미입력"}">
             <div class="truncate text-xs leading-tight font-semibold text-slate-700">${escapeHtml(moduleCode)}</div>
-            <div class="mt-1.5 truncate text-sm leading-tight font-bold ${changedInLatest ? "text-amber-700" : "text-blue-700"}">${moduleRevision ? escapeHtml(formatRevisionLabel(moduleRevision.revisionNumber)) : "-"}</div>
+            <div class="mt-1.5 truncate text-sm leading-tight font-bold ${changedInLatest ? "text-amber-700" : "text-blue-700"}">${escapeHtml(moduleVersion)}</div>
           </div>`;
       }).join("")}
     </div>`).join("");
