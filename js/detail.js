@@ -287,15 +287,20 @@ function getLatestRevisionForModule(moduleCode) {
 
 function getLatestVersionForModule(moduleCode) {
   const candidates = product.ctdItems
-    .filter(item => belongsToLatestModule(String(item.code || ""), moduleCode))
-    .filter(item => normalizeRevisionNumber(item.versionNumber))
+    .filter(item => String(item.code || "").trim() === moduleCode)
+    .filter(item => {
+      if (item.versionNumber === null || item.versionNumber === undefined) return false;
+      if (String(item.versionNumber).trim() === "") return false;
+      const version = parseRevisionNumber(item.versionNumber);
+      return Number.isFinite(version) && version >= 0;
+    })
     .sort((a, b) => {
       const dateCompare = String(b.revisionDate || "").localeCompare(String(a.revisionDate || ""));
       if (dateCompare !== 0) return dateCompare;
       return parseRevisionNumber(b.versionNumber) - parseRevisionNumber(a.versionNumber);
     });
 
-  return candidates.length ? formatRevisionLabel(candidates[0].versionNumber) : "-";
+  return candidates.length ? formatRevisionLabel(candidates[0].versionNumber) : "";
 }
 
 function renderModuleLatestStatus() {
@@ -313,9 +318,9 @@ function renderModuleLatestStatus() {
         const moduleVersion = getLatestVersionForModule(moduleCode);
         const changedInLatest = Boolean(moduleRevision && latestRevision && moduleRevision.id === latestRevision.id && getRevisionHistory().length > 1);
         return `
-          <div class="min-w-0 rounded-lg border px-2 py-3 text-center ${changedInLatest ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-slate-50"}" title="${escapeHtml(moduleCode)} · ${moduleVersion !== "-" ? `버전 ${escapeHtml(moduleVersion)}` : "버전 미입력"}">
+          <div class="min-w-0 rounded-lg border px-2 py-3 text-center ${changedInLatest ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-slate-50"}" title="${escapeHtml(moduleCode)} · ${moduleVersion ? `버전 ${escapeHtml(moduleVersion)}` : "버전 미입력"}">
             <div class="truncate text-xs leading-tight font-semibold text-slate-700">${escapeHtml(moduleCode)}</div>
-            <div class="mt-1.5 truncate text-sm leading-tight font-bold ${changedInLatest ? "text-amber-700" : "text-blue-700"}">${escapeHtml(moduleVersion)}</div>
+            <div class="mt-1.5 min-h-[1.25rem] truncate text-sm leading-tight font-bold ${changedInLatest ? "text-amber-700" : "text-blue-700"}">${escapeHtml(moduleVersion)}</div>
           </div>`;
       }).join("")}
     </div>`).join("");
