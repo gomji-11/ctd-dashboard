@@ -241,6 +241,18 @@ function getRevisionHistory() {
   return [...product.revisionHistory].sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
 }
 
+function getRevisionSequence(revision) {
+  if (!revision) return 0;
+  const chronological = [...getRevisionHistory()].reverse();
+  const index = chronological.findIndex(item => item.id === revision.id);
+  return index >= 0 ? index + 1 : 0;
+}
+
+function formatRevisionSequence(revision) {
+  const sequence = getRevisionSequence(revision);
+  return sequence ? `No. ${sequence}` : "-";
+}
+
 const latestModuleGroups = [
   {
     label: "모듈 2",
@@ -335,7 +347,7 @@ function renderRevisionHistory() {
     body.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-slate-500">등록된 개정이력이 없습니다.</td></tr>`;
   } else {
     body.innerHTML = revisions.map(item => `<tr class="revision-view-row cursor-pointer ${item.id === selectedRevisionId ? "bg-blue-50 ring-1 ring-inset ring-blue-200" : "hover:bg-slate-50"}" data-id="${escapeHtml(item.id)}">
-      <td class="px-4 py-4 font-semibold">${escapeHtml(formatRevisionLabel(item.revisionNumber))}</td>
+      <td class="px-4 py-4 font-semibold">${getRevisionSequence(item)}</td>
       <td class="px-4 py-4 text-center">${escapeHtml(item.revisionDate || item.completedDate || item.plannedDate || "-")}</td>
       <td class="px-4 py-4 whitespace-pre-line">${escapeHtml(item.reason || "-")}</td>
       <td class="px-4 py-4 text-center"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">${Array.isArray(item.ctdSnapshot) ? item.ctdSnapshot.length : 0}개 항목 연동</span></td>
@@ -346,7 +358,7 @@ function renderRevisionHistory() {
   document.getElementById("openRevisionModalBtn").classList.toggle("hidden", !canEditData());
   const latest = revisions[0];
   const selected = getSelectedRevision();
-  document.getElementById("currentRevisionNumber").textContent = selected ? formatRevisionLabel(selected.revisionNumber) : "v0.1";
+  document.getElementById("currentRevisionNumber").textContent = selected ? formatRevisionSequence(selected) : "No. 1";
   document.getElementById("ctdSectionTitle").textContent = selected?.id === latest?.id ? "최신 CTD 세부 항목 구비현황" : "과거 CTD 세부 항목 구비현황";
   document.getElementById("ctdSectionDescription").textContent = selected?.id === latest?.id
     ? "위 개정이력과 자동 연동된 최신 현황입니다. 아래 ‘구비현황 수정’을 눌러야 변경할 수 있습니다."
@@ -354,9 +366,9 @@ function renderRevisionHistory() {
   const editing = canEditCurrentRevision();
   const status = document.getElementById("ctdEditStatus");
   status.textContent = editing
-    ? `✏️ ${formatRevisionLabel(latest.revisionNumber)} 수정 중 · 변경 내용은 이 개정이력에 자동 저장됩니다.`
+    ? `✏️ ${formatRevisionSequence(latest)} 수정 중 · 변경 내용은 이 개정이력에 자동 저장됩니다.`
     : selected?.id !== latest?.id
-      ? `🕘 ${formatRevisionLabel(selected?.revisionNumber)} 당시의 저장본 · 과거 개정은 조회만 가능합니다.`
+      ? `🕘 ${formatRevisionSequence(selected)} 당시의 저장본 · 과거 개정은 조회만 가능합니다.`
       : "🔒 조회 상태 · 실수 방지를 위해 편집이 잠겨 있습니다.";
   status.className = editing
     ? "mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800"
@@ -370,10 +382,8 @@ function renderRevisionHistory() {
 
 function openRevisionModal(revision = null) {
   if (!canEditData()) return;
-  const nextRevisionNumber = getNextRevisionNumber();
   document.getElementById("revisionModalTitle").textContent = revision ? "개정이력 수정" : "개정이력 등록";
   document.getElementById("editingRevisionId").value = revision?.id || "";
-  document.getElementById("revisionNumberInput").value = formatRevisionLabel(revision?.revisionNumber || nextRevisionNumber);
   document.getElementById("revisionDateInput").value = revision?.revisionDate || revision?.completedDate || revision?.plannedDate || new Date().toISOString().slice(0, 10);
   document.getElementById("revisionAuthorInput").value = revision?.author === "시스템" ? "" : (revision?.author || "");
   document.getElementById("revisionReasonInput").value = revision?.reason || "";
@@ -410,7 +420,7 @@ async function deleteRevisionFromModal() {
     alert("최소 한 개의 개정이력은 남아 있어야 합니다.");
     return;
   }
-  if (!confirm(`${formatRevisionLabel(target.revisionNumber)} 이력과 저장된 구비현황을 삭제하시겠습니까?\n\n삭제 후에는 되돌릴 수 없습니다.`)) return;
+  if (!confirm(`${formatRevisionSequence(target)} 이력과 저장된 구비현황을 삭제하시겠습니까?\n\n삭제 후에는 되돌릴 수 없습니다.`)) return;
 
   const wasLatest = getLatestRevision()?.id === revisionId;
   product.revisionHistory = product.revisionHistory.filter(item => item.id !== revisionId);
@@ -433,14 +443,9 @@ async function saveRevision(event) {
   if (!canEditData()) return;
   const editingId = document.getElementById("editingRevisionId").value;
   const existing = product.revisionHistory.find(item => item.id === editingId);
-  const normalizedRevisionNumber = normalizeRevisionNumber(document.getElementById("revisionNumberInput").value);
-  if (!normalizedRevisionNumber) {
-    alert("버전은 v0.1처럼 숫자와 소수점 첫째 자리로 입력해주세요.");
-    return;
-  }
   const entry = {
     id: editingId || `REV-${Date.now()}`,
-    revisionNumber: normalizedRevisionNumber,
+    revisionNumber: existing?.revisionNumber || String(product.revisionHistory.length + 1),
     revisionDate: document.getElementById("revisionDateInput").value,
     reason: document.getElementById("revisionReasonInput").value.trim(),
     author: document.getElementById("revisionAuthorInput").value.trim(),
@@ -667,7 +672,7 @@ function generateReportHtml(reportType) {
   const today = new Date().toISOString().slice(0, 10);
   const revisionRows = getRevisionHistory().map(item => `
     <tr>
-      <td>${escapeHtml(formatRevisionLabel(item.revisionNumber))}</td>
+      <td>${getRevisionSequence(item)}</td>
       <td>${escapeHtml(item.revisionDate || item.completedDate || item.plannedDate || "-")}</td>
       <td>${escapeHtml(item.reason || "-")}</td>
       <td>${escapeHtml(item.author || "-")}</td>
@@ -849,11 +854,11 @@ function generateReportHtml(reportType) {
 
       ${includeRevisions ? `<h2>CTD 개정이력</h2>
       <table>
-        <thead><tr><th>버전</th><th>개정일</th><th>개정사유</th><th>작성자</th></tr></thead>
+        <thead><tr><th>No.</th><th>개정일</th><th>개정사유</th><th>작성자</th></tr></thead>
         <tbody>${revisionRows || `<tr><td colspan="4">등록된 개정이력이 없습니다.</td></tr>`}</tbody>
       </table>` : ""}
 
-      ${includeLatest ? `<h2>최신 CTD 구비현황 · ${escapeHtml(formatRevisionLabel(latestRevision?.revisionNumber))}</h2>${moduleSections || "<p>출력할 CTD 항목이 없습니다.</p>"}` : ""}
+      ${includeLatest ? `<h2>최신 CTD 구비현황 · ${escapeHtml(formatRevisionSequence(latestRevision))}</h2>${moduleSections || "<p>출력할 CTD 항목이 없습니다.</p>"}` : ""}
     </body>
     </html>
   `;

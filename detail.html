@@ -85,7 +85,7 @@
       </div>
       <div class="overflow-x-auto">
         <table class="min-w-[760px] w-full text-sm">
-          <thead class="bg-slate-100 text-slate-600"><tr><th class="px-4 py-3 text-left">버전</th><th class="px-4 py-3 text-center">개정일</th><th class="px-4 py-3 text-left">개정사유</th><th class="px-4 py-3 text-center">CTD 연동</th><th class="px-4 py-3 text-center">작성자</th><th class="px-4 py-3 text-center">관리</th></tr></thead>
+          <thead class="bg-slate-100 text-slate-600"><tr><th class="px-4 py-3 text-left">No.</th><th class="px-4 py-3 text-center">개정일</th><th class="px-4 py-3 text-left">개정사유</th><th class="px-4 py-3 text-center">CTD 연동</th><th class="px-4 py-3 text-center">작성자</th><th class="px-4 py-3 text-center">관리</th></tr></thead>
           <tbody id="revisionTableBody" class="divide-y divide-slate-100"></tbody>
         </table>
       </div>
@@ -94,7 +94,7 @@
     <section class="bg-white rounded-2xl shadow overflow-hidden">
       <div class="p-6 border-b">
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div class="flex items-center gap-3"><h2 id="ctdSectionTitle" class="text-lg font-semibold">최신 CTD 세부 항목 구비현황</h2><span id="currentRevisionNumber" class="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">v0.1</span></div>
+          <div class="flex items-center gap-3"><h2 id="ctdSectionTitle" class="text-lg font-semibold">최신 CTD 세부 항목 구비현황</h2><span id="currentRevisionNumber" class="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">No. 1</span></div>
           <div class="flex items-center gap-2">
             <button id="startCtdEditBtn" class="hidden px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">구비현황 수정</button>
             <button id="finishCtdEditBtn" class="hidden px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50">수정 종료 · 잠금</button>
@@ -127,9 +127,8 @@
   <div id="revisionModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 mx-4">
       <div class="flex justify-between items-center mb-6"><h2 id="revisionModalTitle" class="text-xl font-bold">개정이력 등록</h2><button id="closeRevisionModalBtn" class="text-slate-400 hover:text-slate-700 text-2xl">&times;</button></div>
-      <form id="revisionForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form id="revisionForm" class="grid grid-cols-1 gap-4">
         <input type="hidden" id="editingRevisionId" />
-        <div><label class="block text-sm font-medium mb-1">버전</label><input id="revisionNumberInput" required inputmode="decimal" placeholder="예: v0.1" class="w-full border rounded-lg px-3 py-2" /></div>
         <div><label class="block text-sm font-medium mb-1">개정일</label><input id="revisionDateInput" type="date" required class="w-full border rounded-lg px-3 py-2" /></div>
         <div class="md:col-span-2"><label class="block text-sm font-medium mb-1">작성자</label><input id="revisionAuthorInput" required maxlength="50" autocomplete="off" placeholder="실제 작성자 이름을 입력하세요" class="w-full border rounded-lg px-3 py-2" /></div>
         <div class="md:col-span-2"><label class="block text-sm font-medium mb-1">개정사유</label><textarea id="revisionReasonInput" required rows="4" placeholder="개정 내용을 입력하세요" class="w-full border rounded-lg px-3 py-2 resize-y"></textarea></div>
